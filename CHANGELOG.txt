@@ -1,0 +1,14 @@
+scftpy Changelog
+===============
+
+Here you can see the full list of changes between each scftpy release.
+
+Version 0.1
+-----------
+
+* Release planned on September, 2012
+
+Developing stage
+----------------
+
+* Since Aug. 27th, 2012

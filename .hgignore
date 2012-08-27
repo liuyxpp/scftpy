@@ -1,0 +1,11 @@
+syntax: glob
+docs/_build/*
+tests/*.py
+dist/*
+scftpy.egg-info/*
+*.pyc
+*.swp
+*.mat
+*.png
+*.bak
+*.tar.gz

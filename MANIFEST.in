@@ -1,0 +1,8 @@
+include README.rst
+include LICENSE.txt
+include CHANGELOG.txt
+recursive-include docs *
+recursive-exclude docs *.tar.gz
+recursive-exclude scftpy *.pyc
+recursive-exclude scftpy *.pyo
+
