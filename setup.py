@@ -35,10 +35,11 @@ Here is an example of carrying out 1D unitcell calculations of A-B diblock copol
 
 ::
 
-    $ from scftpy import scft
-    $ scft.run()
+    $ from scftpy import Brush
+    $ sim = Brush('param.ini')
+    $ sim.run()
 
-Note: you should modify the configuration file (scft.cfg) for different systems. 
+Note: you should modify the configuration file (param.ini) for different systems. 
 A sample cofiguration file can be found in the package source root directory.
 
 Ask for Help

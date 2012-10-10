@@ -16,5 +16,6 @@ __author__ = "Yi-Xin Liu <liuyxpp@gmail.com>"
 __license__ = "BSD License"
 __version__ = "0.1"
 
-from scft import *
+from config import *
+from brush import *
 
