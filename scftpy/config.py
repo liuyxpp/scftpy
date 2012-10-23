@@ -10,6 +10,8 @@ Parse SCFT configurations.
 import json
 from ConfigParser import SafeConfigParser
 
+import numpy as np
+
 __all__ = ['SCFTConfig',
           ]
 
@@ -20,17 +22,22 @@ class ModelSection(object):
     def __init__(self, data):
         section = 'Model'
         self.name = section
-        self.number_of_component = data.getint(section, 
-                                               'number_of_component')
+        self.n_block = data.getint(section, 'n_block')
         self.N = json.loads(data.get(section, 'N'))
         self.a = json.loads(data.get(section, 'a'))
         self.chiN = json.loads(data.get(section, 'chiN'))
+        self.graft_density = data.getfloat(section, 'graft_density')
+        self.excluded_volume = data.getfloat(section, 'excluded_volume')
 
         self.check()
 
     def check(self):
-        n = self.number_of_component
-        if n != len(self.N) or n != len(self.a) or n != len(self.chiN):
+        n = self.n_block
+        if n == 1:
+            n_chi = 0
+        else:
+            n_chi = n * (n-1) / 2
+        if n != len(self.N) or n != len(self.a) or n_chi != len(self.chiN):
             raise ConfigError('Length of parameter list does not '
                               'match number of components!')
 
@@ -131,7 +138,7 @@ class SCFTConfig(object):
        return cls(cfg)
 
     def check(self):
-        n = self.model.number_of_component
+        n = self.model.n_block
         if n != len(self.grid.lam):
             raise ConfigError('Length of parameter list does not '
                               'match number of components!')
