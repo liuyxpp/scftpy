@@ -17,5 +17,6 @@ __license__ = "BSD License"
 __version__ = "0.1"
 
 from config import *
+from util import *
 from brush import *
 

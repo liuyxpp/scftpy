@@ -11,6 +11,7 @@ import json
 from ConfigParser import SafeConfigParser
 
 import numpy as np
+from scipy.io import savemat, loadmat
 
 __all__ = ['SCFTConfig',
           ]
@@ -41,6 +42,10 @@ class ModelSection(object):
             raise ConfigError('Length of parameter list does not '
                               'match number of components!')
 
+    def save_to_mat(self, matfile):
+        ''' Save data to matfile. '''
+        savemat(matfile, self.__dict__)
+
 
 class UnitCellSection(object):
     def __init__(self, data):
@@ -52,25 +57,29 @@ class UnitCellSection(object):
         try:
             self.b = data.getfloat(section, 'b')
         except ValueError:
-            self.b = None
+            self.b = []
         try:
             self.c = data.getfloat(section, 'c')
         except ValueError:
-            self.c = None
+            self.c = []
         try:
             self.alpha = data.getfloat(section, 'alpha')
         except ValueError:
-            self.alpha = None
+            self.alpha = []
         try:
             self.beta = data.getfloat(section, 'beta')
         except ValueError:
-            self.beta = None
+            self.beta = []
         try:
             self.gamma = data.getfloat(section, 'gamma')
         except ValueError:
-            self.gamma = None
+            self.gamma = []
         self.N_list = json.loads(data.get(section, 'N_list'))
         self.c_list = json.loads(data.get(section, 'c_list'))
+
+    def save_to_mat(self, matfile):
+        ''' Save data to matfile. '''
+        savemat(matfile, self.__dict__)
 
 
 class GridSection(object):
@@ -100,6 +109,10 @@ class GridSection(object):
             raise ConfigError('Available Lx, Ly, and Lz do not '
                               'match given dimension!')
 
+    def save_to_mat(self, matfile):
+        ''' Save data to matfile. '''
+        savemat(matfile, self.__dict__)
+
 
 class SCFTSection(object):
     def __init__(self, data):
@@ -119,6 +132,10 @@ class SCFTSection(object):
         self.thresh_H = data.getfloat(section, 'thresh_H')
         self.thresh_residual = data.getfloat(section, 'thresh_residual')
         self.thresh_incomp = data.getfloat(section, 'thresh_incomp')
+
+    def save_to_mat(self, matfile):
+        ''' Save data to matfile. '''
+        savemat(matfile, self.__dict__)
 
 
 class SCFTConfig(object):
@@ -142,4 +159,14 @@ class SCFTConfig(object):
         if n != len(self.grid.lam):
             raise ConfigError('Length of parameter list does not '
                               'match number of components!')
+
+    def save_to_mat(self, matfile):
+        ''' Save data to matfile. '''
+        data = {}
+        data.update(self.model.__dict__)
+        data.update(self.uc.__dict__)
+        data.update(self.grid.__dict__)
+        data.update(self.scft.__dict__)
+        del data['name']
+        savemat(matfile, data)
 

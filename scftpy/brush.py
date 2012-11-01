@@ -12,9 +12,13 @@ Liu, Y. X. *Polymer Brush III*, Technical Reports, Fudan University, 2012.
 
 """
 
+import os
+
 import numpy as np
 from scipy.integrate import simps, trapz, romb
+from scipy.io import savemat, loadmat
 import matplotlib.pyplot as plt
+
 import mpltex.acs
 from chebpy import cheb_mde_neumann_etdrk4, cheb_mde_dirichlet_etdrk4
 from chebpy import cheb_mde_robin_etdrk4, cheb_mde_robin_dirichlet_etdrk4
@@ -23,6 +27,7 @@ from chebpy import clencurt_weights_fft, cheb_quadrature_clencurt
 from chebpy import cheb_D1_mat
 
 from scftpy import SCFTConfig
+from scftpy import quad_open4, quad_semiopen4, quad_semiopen3
 
 __all__ = ['Brush',
           ]
@@ -97,55 +102,13 @@ def calc_brush_height(x, phi):
     return I1/I2
 
 
-def quad_open4(f, dx):
-    '''
-    Integrate f[0..N] with open interval, (0, N).
-    int_f = dx * (55/24*f_1 - 1/6*f_2 + 11/8 *f_3 + f_4 + f_5 + f_6
-                  ... + f_{N-4} + 11/8*f_{N-3}- 1/6*f_{N-2} + 55/24*f_{N-1})
-    '''
-    N = f.size - 1
-    q = 55./24 * f[1] - 1./6 * f[2] + 11./8 * f[3]
-    q += 55./24 * f[N-1] - 1./6 * f[N-2] + 11./8 * f[N-3]
-    for i in xrange(4, N-3):
-        q += f[i]
-
-    return q * dx
-
-
-def quad_semiopen4(f, dx):
-    '''
-    Integrate f[0..N] with semi-open interval, (0, N].
-    int_f = dx * (55/24*f_1 - 1/6*f_2 + 11/8 *f_3 + f_4 + f_5 + f_6
-                  ... + f_{N-3} + 23/24*f_{N-3}- 7/6*f_{N-2} + 3/8*f_{N-1})
-    '''
-    N = f.size - 1
-    q = 55./24 * f[1] - 1./6 * f[2] + 11./8 * f[3]
-    q += 3./8 * f[N] - 7./6 * f[N-1] + 23./24 * f[N-2]
-    for i in xrange(4, N-2):
-        q += f[i]
-
-    return q * dx
-
-
-def quad_semiopen3(f, dx):
-    '''
-    Integrate f[0..N] in semi-open interval, (0, N].
-    int_f = dx * (55/24*f_1 - 1/6*f_2 + 11/8 *f_3 + f_4 + f_5 + f_6
-                  ... + f_{N-4} + 11/8*f_{N-3}- 1/6*f_{N-2} + 55/24*f_{N-1})
-    '''
-    N = f.size - 1
-    q = 23./12 * f[1] + 7./12 * f[2]
-    q += 5./12 * f[N] + 13./12 * f[N-1]
-    for i in xrange(3, N-2):
-        q += f[i]
-
-    return q * dx
-
-
 class Brush(object):
     def __init__(self, cfgfile):
         self.config = SCFTConfig.from_file(cfgfile)
         self.init()
+        param_file = os.path.join(self.config.scft.base_dir, 
+                               self.config.scft.param_file)
+        self.config.save_to_mat(param_file)
 
     def init(self):
         self.build_model()
@@ -198,16 +161,25 @@ class Brush(object):
         sigma = config.model.graft_density
         ups = config.model.excluded_volume
         lam = config.grid.lam[0]
-        print 'sigma =', sigma, 'ups =', ups, 'lam =', lam
         x_ref = (4. * ups * sigma) ** (1./3)
         x_rescaled = x / x_ref
         phi = np.zeros(Lx)
         phi_ref = (0.25 * sigma * sigma / ups) ** (1./3)
         beta = 0.25 * x_ref * x_ref
-        print 'beta =', beta, 'x_ref =', x_ref, 'phi_ref =', phi_ref
+        print 'sigma =', sigma, 'ups =', ups, 'beta =', beta 
+        print 'Lx =', Lx, 'Ms =', Ms, 'lam =', lam
+        print 'x_ref =', x_ref, 'phi_ref =', phi_ref
         display_interval = config.scft.display_interval
         record_interval = config.scft.record_interval
-        for t in xrange(config.scft.max_iter):
+        save_interval = config.scft.save_interval
+        data_file = os.path.join(config.scft.base_dir,
+                                 config.scft.data_file)
+        ts = []
+        Fs = []
+        hs = []
+        errs_residual = []
+        errs_phi = []
+        for t in xrange(1, config.scft.max_iter+1):
             #raw_input()
 
             # Solve MDE
@@ -268,13 +240,22 @@ class Brush(object):
             h = calc_brush_height(x/x_ref, phi/phi_ref)
 
             if t % record_interval == 0:
+                ts.append(t)
+                Fs.append(F)
+                hs.append(h)
+                errs_residual.append(err1)
+                errs_phi.append(err2)
                 print t, '\t', F1, '\t', F2, '\t', F, '\t', h
                 print '\t', err1, '\t', err2
+            if t % save_interval == 0:
+                savemat(data_file+'_'+str(t), {'t':ts, 'F':Fs, 'h':hs,
+                                    'beta':beta, 'x_ref':x_ref,
+                                    'phi_ref':phi_ref, 'x':x/x_ref,
+                                    'err_residual':errs_residual,
+                                    'err_phi':errs_phi,
+                                    'phi':phi/phi_ref, 'w':self.w})
 
             # Update field
-            #self.w = phi
             self.w = self.w + lam * res * ups
-            #self.w = ups * self.w
-            #self.w = self.w - self.w.mean()
 
 
