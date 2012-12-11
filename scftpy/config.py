@@ -13,6 +13,8 @@ from ConfigParser import SafeConfigParser
 import numpy as np
 from scipy.io import savemat, loadmat
 
+from chebpy import DIRICHLET, NEUMANN, ROBIN
+
 __all__ = ['SCFTConfig',
           ]
 
@@ -29,6 +31,10 @@ class ModelSection(object):
         self.chiN = json.loads(data.get(section, 'chiN'))
         self.graft_density = data.getfloat(section, 'graft_density')
         self.excluded_volume = data.getfloat(section, 'excluded_volume')
+        self.lbc = data.get(section, 'BC_left')
+        self.lbc_vc = json.loads(data.get(section, 'BC_coefficients_left'))
+        self.rbc = data.get(section, 'BC_right')
+        self.rbc_vc = json.loads(data.get(section, 'BC_coefficients_right'))
 
         self.check()
 
@@ -41,6 +47,10 @@ class ModelSection(object):
         if n != len(self.N) or n != len(self.a) or n_chi != len(self.chiN):
             raise ConfigError('Length of parameter list does not '
                               'match number of components!')
+        if self.lbc == ROBIN and len(self.lbc_vc) != 3:
+            raise ConfigError('Left RBC without coefficients!')
+        if self.rbc == ROBIN and len(self.rbc_vc) != 3:
+            raise ConfigError('Right RBC without coefficients!')
 
     def save_to_mat(self, matfile):
         ''' Save data to matfile. '''

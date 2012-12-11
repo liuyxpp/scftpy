@@ -13,6 +13,7 @@ Liu, Y. X. *Polymer Brush III*, Technical Reports, Fudan University, 2012.
 """
 
 import os
+from time import clock
 
 import numpy as np
 from scipy.integrate import simps, trapz, romb
@@ -20,9 +21,8 @@ from scipy.io import savemat, loadmat
 import matplotlib.pyplot as plt
 
 import mpltex.acs
-from chebpy import cheb_mde_neumann_etdrk4, cheb_mde_dirichlet_etdrk4
-from chebpy import cheb_mde_robin_etdrk4, cheb_mde_robin_dirichlet_etdrk4
-from chebpy import cheb_mde_robin_neumann_etdrk4
+from chebpy import BC, ETDRK4, OSCHEB
+from chebpy import DIRICHLET, NEUMANN, ROBIN
 from chebpy import clencurt_weights_fft, cheb_quadrature_clencurt 
 from chebpy import cheb_D1_mat
 
@@ -54,6 +54,11 @@ def generate_IC(w, ds, x0, L):
 
 
 def make_delta(N, x0, L):
+    #return make_delta_heaviside(N, x0, L)
+    return make_delta_gauss(N, x0, L)
+
+
+def make_delta_heaviside(N, x0, L):
     '''
     Construct a delta function delta(z-z0) on Chebyshev grid.
     Approximate Dirac delta funcition by differentiating a step function.
@@ -65,14 +70,44 @@ def make_delta(N, x0, L):
     H[ix] = .5
     u = (2/L) * np.dot(D, H)
 
-    #u = np.zeros(N+1)
-    #ii = np.arange(N+1)
-    #x = np.cos(np.pi * ii / N)
-    #w = clencurt_weights_fft(N)
+    x = .5 * (x + 1) * L
+
+    return u, x, ix
+
+
+def make_delta_kronecker(N, x0, L):
+    '''
+    Construct a delta function delta(z-z0) on Chebyshev grid.
+    Approximate Dirac delta funcition by Kronecker delta.
+    '''
+    ix = int(np.arccos(2*x0/L-1) / np.pi * N)
+    u = np.zeros(N+1)
+    ii = np.arange(N+1)
+    x = np.cos(np.pi * ii / N)
+    w = clencurt_weights_fft(N)
     #ix = N - 1 # set the second-to-last element to be the delta postion
-    #u[ix] = (2.0/L) / w[ix]
+    u[ix] = (2.0/L) / w[ix]
 
     x = .5 * (x + 1) * L
+    x.shape = (x.size, 1)
+
+    return u, x, ix
+
+
+def make_delta_gauss(N, x0, L):
+    '''
+    Construct a delta function delta(z-z0) on Chebyshev grid.
+    Approximate Dirac delta funcition by a Gaussian distribution.
+    '''
+    alpha = 0.001
+    ix = int(np.arccos(2*x0/L-1) / np.pi * N)
+    ii = np.arange(N+1)
+    x = np.cos(np.pi * ii / N)
+    x = .5 * (x + 1) * L
+    x0 = x[ix]
+    
+    u = 0.5 * np.exp(-(x-x0)**2/(2*alpha)) / np.sqrt(0.5*np.pi*alpha)
+    x.shape = (x.size, 1)
 
     return u, x, ix
 
@@ -119,6 +154,10 @@ class Brush(object):
         self.N = config.model.N
         self.a = config.model.a
         self.chiN = config.model.chiN
+        self.lbc = config.model.lbc
+        self.lbc_vc = config.model.lbc_vc
+        self.rbc = config.model.rbc
+        self.rbc_vc = config.model.rbc_vc
 
     def build_grid(self):
         config = self.config
@@ -145,13 +184,24 @@ class Brush(object):
             self.q = np.zeros((Ms, Lx))
             self.q[0,:] = 1.
             self.qc = np.zeros((Ms, Lx))
+            lbc = BC(self.lbc, self.lbc_vc)
+            rbc = BC(self.rbc, self.rbc_vc)
+            h = 1. / (Ms - 1)
+            self.q_solver = ETDRK4(L, N, Ms, h=h, lbc=lbc, rbc=rbc)
+            #self.qc_solver = ETDRK4(L, N, Ms, h=h, lbc=lbc, rbc=rbc)
+            self.qc_solver = ETDRK4(L, N, Ms-1, h=h, lbc=lbc, rbc=rbc) # CKE
+            #self.q_solver = OSCHEB(L, N, Ms, h)
+            #self.qc_solver = OSCHEB(L, N, Ms, h)
+            #self.qc_solver = OSCHEB(L, N, Ms-1, h) # CKE
         else:
             raise ValueError('Only 1D, 2D and 3D spaces are allowed!')
 
     def run(self):
         config = self.config
-        x0 = 0.5 * np.sqrt(6.0/self.N[0])
-        #x0 = 0
+        if self.lbc == DIRICHLET:
+            x0 = 0.5 * np.sqrt(6.0/self.N[0])
+        else:
+            x0 = 0
         L = config.uc.a
         Lx = config.grid.Lx
         delta, x, ix0 = make_delta(Lx-1, x0, L)
@@ -172,6 +222,7 @@ class Brush(object):
         display_interval = config.scft.display_interval
         record_interval = config.scft.record_interval
         save_interval = config.scft.save_interval
+        thresh_residual = config.scft.thresh_residual
         data_file = os.path.join(config.scft.base_dir,
                                  config.scft.data_file)
         ts = []
@@ -179,6 +230,8 @@ class Brush(object):
         hs = []
         errs_residual = []
         errs_phi = []
+        times = []
+        t_start = clock()
         for t in xrange(1, config.scft.max_iter+1):
             #raw_input()
 
@@ -191,19 +244,20 @@ class Brush(object):
             #    plt.ylabel('q(0)')
             #    plt.show()
             self.q[0,:] = 1.
-            solve_mde(self.w, self.q, L, Ms, ds)
+            self.q_solver.solve(self.w, self.q[0], self.q)
             if t % display_interval == 0:
                 plt.plot(x_rescaled, self.q[-1])
                 plt.ylabel('q(-1)')
                 plt.show()
             self.qc[0] = (sigma / self.q[-1,ix0]) * delta
-            qc1, x, ix0 = generate_IC(self.w, ds, x0, L)
-            self.qc[1] = (sigma / self.q[-1,ix0]) * qc1
+            qc1, x, ix0 = generate_IC(self.w, ds, x0, L) # CKE
+            self.qc[1] = (sigma / self.q[-1,ix0]) * qc1 # CKE
             if t % display_interval == 0:
                 plt.plot(x_rescaled, self.qc[0])
                 plt.ylabel('qc(0)')
                 plt.show()
-            solve_mde(self.w, self.qc[1:,:], L, Ms-1, ds)
+            #self.qc_solver.solve(self.w, self.qc[0], self.qc)
+            self.qc_solver.solve(self.w, self.qc[1], self.qc[1:]) # CKE
             if t % display_interval == 0:
                 plt.plot(x_rescaled, self.qc[-1])
                 plt.ylabel('qc(-1)')
@@ -240,20 +294,33 @@ class Brush(object):
             h = calc_brush_height(x/x_ref, phi/phi_ref)
 
             if t % record_interval == 0:
+                t_end = clock()
                 ts.append(t)
                 Fs.append(F)
                 hs.append(h)
                 errs_residual.append(err1)
                 errs_phi.append(err2)
+                times.append((t_end-t_start)/record_interval)
                 print t, '\t', F1, '\t', F2, '\t', F, '\t', h
                 print '\t', err1, '\t', err2
             if t % save_interval == 0:
-                savemat(data_file+'_'+str(t), {'t':ts, 'F':Fs, 'h':hs,
+                savemat(data_file+'_'+str(t), {'t':ts, 'time':times, 
+                                    'F':Fs, 'h':hs, 'ix0':ix0,
+                                    'beta':beta, 'x_ref':x_ref,
+                                    'phi_ref':phi_ref, 'x':x/x_ref,
+                                    'err_residual':errs_residual,
+                                    'err_phi':errs_phi, 
+                                    'phi':phi/phi_ref, 'w':self.w})
+
+            if err1 < thresh_residual:
+                savemat(data_file, {'t':ts, 'time':times,
+                                    'F':Fs, 'h':hs, 'ix0':ix0,
                                     'beta':beta, 'x_ref':x_ref,
                                     'phi_ref':phi_ref, 'x':x/x_ref,
                                     'err_residual':errs_residual,
                                     'err_phi':errs_phi,
                                     'phi':phi/phi_ref, 'w':self.w})
+                exit()
 
             # Update field
             self.w = self.w + lam * res * ups

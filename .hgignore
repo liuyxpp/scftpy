@@ -3,6 +3,7 @@ docs/_build/*
 tests/*.py
 dist/*
 scftpy.egg-info/*
+tags
 *.pyc
 *.swp
 *.mat
