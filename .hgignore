@@ -4,6 +4,7 @@ tests/*.py
 dist/*
 scftpy.egg-info/*
 tags
+log
 *.pyc
 *.swp
 *.mat

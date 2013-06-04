@@ -141,7 +141,7 @@ class Brush(object):
     def __init__(self, cfgfile):
         self.config = SCFTConfig.from_file(cfgfile)
         self.init()
-        param_file = os.path.join(self.config.scft.base_dir, 
+        param_file = os.path.join(self.config.scft.base_dir,
                                self.config.scft.param_file)
         self.config.save_to_mat(param_file)
 
@@ -175,14 +175,13 @@ class Brush(object):
         elif d == 1:
             #self.w = np.random.rand(Lx)
             L = config.uc.a
-            ups = config.model.excluded_volume
             N = Lx - 1
             ii = np.arange(N+1)
             x = np.cos(np.pi * ii / N)
             x = .5 * (x + 1) * L
             self.w = (1 - (.5*x/L)**2)
             self.q = np.zeros((Ms, Lx))
-            self.q[0,:] = 1.
+            self.q[0, :] = 1.
             self.qc = np.zeros((Ms, Lx))
             lbc = BC(self.lbc, self.lbc_vc)
             rbc = BC(self.rbc, self.rbc_vc)
@@ -216,7 +215,7 @@ class Brush(object):
         phi = np.zeros(Lx)
         phi_ref = (0.25 * sigma * sigma / ups) ** (1./3)
         beta = 0.25 * x_ref * x_ref
-        print 'sigma =', sigma, 'ups =', ups, 'beta =', beta 
+        print 'sigma =', sigma, 'ups =', ups, 'beta =', beta
         print 'Lx =', Lx, 'Ms =', Ms, 'lam =', lam
         print 'x_ref =', x_ref, 'phi_ref =', phi_ref
         display_interval = config.scft.display_interval
@@ -243,28 +242,28 @@ class Brush(object):
             #    plt.plot(x_rescaled, self.q[0])
             #    plt.ylabel('q(0)')
             #    plt.show()
-            self.q[0,:] = 1.
+            self.q[0, :] = 1.
             self.q_solver.solve(self.w, self.q[0], self.q)
             if t % display_interval == 0:
                 plt.plot(x_rescaled, self.q[-1])
                 plt.ylabel('q(-1)')
                 plt.show()
             self.qc[0] = (sigma / self.q[-1,ix0]) * delta
-            qc1, x, ix0 = generate_IC(self.w, ds, x0, L) # CKE
-            self.qc[1] = (sigma / self.q[-1,ix0]) * qc1 # CKE
+            qc1, x, ix0 = generate_IC(self.w, ds, x0, L)  # CKE
+            self.qc[1] = (sigma / self.q[-1,ix0]) * qc1  # CKE
             if t % display_interval == 0:
                 plt.plot(x_rescaled, self.qc[0])
                 plt.ylabel('qc(0)')
                 plt.show()
             #self.qc_solver.solve(self.w, self.qc[0], self.qc)
-            self.qc_solver.solve(self.w, self.qc[1], self.qc[1:]) # CKE
+            self.qc_solver.solve(self.w, self.qc[1], self.qc[1:])  # CKE
             if t % display_interval == 0:
                 plt.plot(x_rescaled, self.qc[-1])
                 plt.ylabel('qc(-1)')
                 plt.show()
 
             # Calculate energy
-            Q = self.q[-1,ix0]
+            Q = self.q[-1, ix0]
             #Q = 1.0
             #F1 = -0.5 * cheb_quadrature_clencurt(self.w*self.w)
             #F2 = -sigma * np.log(Q)
@@ -272,7 +271,7 @@ class Brush(object):
                     * cheb_quadrature_clencurt((phi/phi_ref)**2)
             F2 = -np.log(Q)
             F = F1 + F2
-            
+
             # Calculate density
             phi0 = phi
             phi = calc_density(self.q, self.qc)
@@ -324,5 +323,3 @@ class Brush(object):
 
             # Update field
             self.w = self.w + lam * res * ups
-
-
