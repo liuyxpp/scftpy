@@ -29,7 +29,9 @@ class ModelSection(object):
         self.N = json.loads(data.get(section, 'N'))
         self.a = json.loads(data.get(section, 'a'))
         self.chiN = json.loads(data.get(section, 'chiN'))
+        # In dimensionless unit = \sigma R_g^2 / C
         self.graft_density = data.getfloat(section, 'graft_density')
+        # In dimensionless unit = w N^2 / R_g^3
         self.excluded_volume = data.getfloat(section, 'excluded_volume')
         self.lbc = data.get(section, 'BC_left')
         self.lbc_vc = json.loads(data.get(section, 'BC_coefficients_left'))
@@ -37,6 +39,21 @@ class ModelSection(object):
         self.rbc_vc = json.loads(data.get(section, 'BC_coefficients_right'))
 
         self.check()
+
+    @property
+    def beta(self):
+        # Assume C = 1
+        return (self.excluded_volume * self.graft_density * 0.5)**(2./3)
+
+    @property
+    def z_hat(self):
+        # \hat{z}, in unit of R_g.
+        return (4.0 * self.excluded_volume * self.graft_density)**(1./3)
+
+    @property
+    def phi_hat(self):
+        # \hat{\phi}, assumed C = 1
+        return (self.graft_density / self.excluded_volume * 0.25)**(1./3)
 
     def check(self):
         n = self.n_block
@@ -131,6 +148,7 @@ class SCFTSection(object):
         self.base_dir = data.get(section, 'base_dir')
         self.data_file = data.get(section, 'data_file')
         self.param_file = data.get(section, 'param_file')
+        self.q_file = data.get(section, 'q_file')
         self.min_iter = data.getint(section, 'min_iter')
         self.max_iter = data.getint(section, 'max_iter')
         self.is_display = data.getboolean(section, 'is_display')

@@ -210,20 +210,26 @@ class Brush(object):
         sigma = config.model.graft_density
         ups = config.model.excluded_volume
         lam = config.grid.lam[0]
-        x_ref = (4. * ups * sigma) ** (1./3)
+        #x_ref = (4. * ups * sigma) ** (1./3)
+        x_ref = config.model.z_hat
         x_rescaled = x / x_ref
         phi = np.zeros(Lx)
-        phi_ref = (0.25 * sigma * sigma / ups) ** (1./3)
-        beta = 0.25 * x_ref * x_ref
+        #phi_ref = (0.25 * sigma * sigma / ups) ** (1./3)
+        phi_ref = config.model.phi_hat
+        #beta = 0.25 * x_ref * x_ref
+        beta = config.model.beta
         print 'sigma =', sigma, 'ups =', ups, 'beta =', beta
         print 'Lx =', Lx, 'Ms =', Ms, 'lam =', lam
         print 'x_ref =', x_ref, 'phi_ref =', phi_ref
         display_interval = config.scft.display_interval
         record_interval = config.scft.record_interval
         save_interval = config.scft.save_interval
+        save_q = config.scft.is_save_q
         thresh_residual = config.scft.thresh_residual
         data_file = os.path.join(config.scft.base_dir,
                                  config.scft.data_file)
+        q_file = os.path.join(config.scft.base_dir,
+                                 config.scft.q_file)
         ts = []
         Fs = []
         hs = []
@@ -310,6 +316,8 @@ class Brush(object):
                                     'err_residual':errs_residual,
                                     'err_phi':errs_phi, 
                                     'phi':phi/phi_ref, 'w':self.w})
+                if save_q:
+                    savemat(q_file+'_'+str(t), {'q':self.q, 'qc':self.qc})
 
             if err1 < thresh_residual:
                 savemat(data_file, {'t':ts, 'time':times,
@@ -319,6 +327,8 @@ class Brush(object):
                                     'err_residual':errs_residual,
                                     'err_phi':errs_phi,
                                     'phi':phi/phi_ref, 'w':self.w})
+                if save_q:
+                    savemat(q_file, {'q':self.q, 'qc':self.qc})
                 exit()
 
             # Update field
