@@ -13,7 +13,7 @@ from ConfigParser import SafeConfigParser
 import numpy as np
 from scipy.io import savemat, loadmat
 
-from chebpy import DIRICHLET, NEUMANN, ROBIN
+from chebpy import DIRICHLET, NEUMANN, ROBIN, EPS
 
 __all__ = ['SCFTConfig',
           ]
@@ -26,7 +26,8 @@ class ModelSection(object):
         section = 'Model'
         self.name = section
         self.n_block = data.getint(section, 'n_block')
-        self.N = json.loads(data.get(section, 'N'))
+        self.N = data.getint(section, 'N')
+        self.f = json.loads(data.get(section, 'f'))
         self.a = json.loads(data.get(section, 'a'))
         self.chiN = json.loads(data.get(section, 'chiN'))
         # In dimensionless unit = \sigma R_g^2 / C
@@ -61,9 +62,11 @@ class ModelSection(object):
             n_chi = 0
         else:
             n_chi = n * (n-1) / 2
-        if n != len(self.N) or n != len(self.a) or n_chi != len(self.chiN):
+        if n != len(self.f) or n != len(self.a) or n_chi != len(self.chiN):
             raise ConfigError('Length of parameter list does not '
                               'match number of components!')
+        if np.sum(self.f) - 1.0 > EPS:
+            raise ConfigError('Total fraction is not 1.0')
         if self.lbc == ROBIN and len(self.lbc_vc) != 3:
             raise ConfigError('Left RBC without coefficients!')
         if self.rbc == ROBIN and len(self.rbc_vc) != 3:
@@ -110,16 +113,30 @@ class UnitCellSection(object):
 
 
 class GridSection(object):
-    def __init__(self, data):
+    def __init__(self, data, model):
         section = 'Grid'
         self.name = section
         self.dimension = data.getint(section, 'dimension')
         self.Lx = data.getint(section, 'Lx')
         self.Ly = data.getint(section, 'Ly')
         self.Lz = data.getint(section, 'Lz')
-        self.Ms = data.getint(section, 'Ms')
         self.lam = json.loads(data.get(section, 'lam'))
         self.field_data = data.get(section, 'field_data')
+
+        # for i-th block, the number of discrete points is vMs[i].
+        # 0-th block: 0..1..2..k..(vMs[0]-1)
+        # i-th block: 0..1..2..k..(vMs[i]-1)
+        # For i>0, the point 0 of i-th block is identical to the last point of i-1
+        # (i-1)-th block.
+        self.Ms = data.getint(section, 'Ms')
+        L = self.Ms - 1
+        n = model.n_block
+        f = model.f
+        vMs = np.zeros(n, int)
+        for i in xrange(n-1):
+            vMs[i] = int(L * f[i])
+        vMs[n-1] = L - np.sum(vMs[:-1])
+        self.vMs = vMs + 1
 
         self.check()
 
@@ -148,7 +165,9 @@ class SCFTSection(object):
         self.base_dir = data.get(section, 'base_dir')
         self.data_file = data.get(section, 'data_file')
         self.param_file = data.get(section, 'param_file')
-        self.q_file = data.get(section, 'q_file')
+        # For compatible reason, some older config files do not have 'q_file'
+        if data.has_option(section, 'q_file'):
+            self.q_file = data.get(section, 'q_file')
         self.min_iter = data.getint(section, 'min_iter')
         self.max_iter = data.getint(section, 'max_iter')
         self.is_display = data.getboolean(section, 'is_display')
@@ -170,7 +189,7 @@ class SCFTConfig(object):
     def __init__(self, data):
         self.model = ModelSection(data)
         self.uc = UnitCellSection(data)
-        self.grid = GridSection(data)
+        self.grid = GridSection(data, self.model)
         self.scft = SCFTSection(data)
 
         self.check()
@@ -184,9 +203,10 @@ class SCFTConfig(object):
 
     def check(self):
         n = self.model.n_block
-        if n != len(self.grid.lam):
-            raise ConfigError('Length of parameter list does not '
-                              'match number of components!')
+        if n == 1 and len(self.grid.lam) < 1:
+            raise ConfigError('At least 1 lam needed!')
+        if n > 1 and len(self.grid.lam) < n + 1:
+            raise ConfigError('Not enough number of lam!')
 
     def save_to_mat(self, matfile):
         ''' Save data to matfile. '''
@@ -197,4 +217,10 @@ class SCFTConfig(object):
         data.update(self.scft.__dict__)
         del data['name']
         savemat(matfile, data)
+
+    def display(self):
+        print self.model.__dict__
+        print self.uc.__dict__
+        print self.grid.__dict__
+        print self.scft.__dict__
 

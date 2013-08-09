@@ -19,4 +19,6 @@ __version__ = "0.1"
 from config import *
 from util import *
 from brush import *
+from bulk import *
+from confined import *
 
