@@ -7,9 +7,14 @@ Utilities for SCFT calculations.
 
 """
 
+import matplotlib.pyplot as plt
+import numpy as np
+
+
 __all__ = ['quad_open4',
            'quad_semiopen4',
            'quad_semiopen3',
+           'scft_contourf',
           ]
 
 def quad_open4(f, dx):
@@ -55,4 +60,28 @@ def quad_semiopen3(f, dx):
         q += f[i]
 
     return q * dx
+
+
+def scft_contourf(x, y, z, levels=None, cmap=None, **kwargs):
+    dx = x.max() - x.min()
+    dy = y.max() - y.min()
+    w, h = plt.figaspect(float(dy/dx)) # float is must
+    # No frame, white background, w/h aspect ratio figure
+    fig = plt.figure(figsize=(w/2,h/2), frameon=False, dpi=150, facecolor='w')
+    # full figure subplot, no boarder, no axes
+    ax = fig.add_axes([0,0,1,1], frameon=False, axisbg='w')
+    # no ticks
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+    # Default: there are 256 contour levels
+    if levels is None:
+        step = (z.max() - z.min()) / 32
+        levels = np.arange(z.min(), z.max()+step, step)
+    # Default: colormap is Spectral from matplotlib.cm
+    if cmap is None:
+        cmap = plt.cm.Spectral
+    # actual plot
+    ax.contourf(x, y, z, levels=levels, cmap=cmap, 
+                antialiased=False, **kwargs)
+    return fig
 
