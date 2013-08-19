@@ -5,6 +5,7 @@ dist/*
 scftpy.egg-info/*
 tags
 log
+*.DS_Store
 *.pyc
 *.swp
 *.mat

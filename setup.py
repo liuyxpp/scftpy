@@ -66,7 +66,7 @@ except ImportError:
 
 setup(
     name='scftpy',
-    version='0.1',
+    version='0.2',
     license='BSD',
     description='Polymer self-consistent field theory (SCFT) calculations.',
     author='Yi-Xin Liu',
@@ -83,7 +83,7 @@ setup(
         'chebpy',
     ],
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Science/Research',
         'Intended Audience :: Developers',
         'Intended Audience :: Education',
