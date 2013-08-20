@@ -220,7 +220,6 @@ class SlabAB1d(object):
         self.fA = config.model.f[0]
         self.a = config.model.a[0]
         self.chiN = config.model.chiN[0]
-        self.yita = 100
         self.lbc = config.model.lbc
         self.lbc_vc = config.model.lbc_vc
         self.rbc = config.model.rbc
@@ -237,7 +236,6 @@ class SlabAB1d(object):
         MsB = config.grid.vMs[1]
         self.wA = np.random.rand(Lx)
         self.wB = np.random.rand(Lx)
-        #self.yita = np.zeros([Lx,Ly])
         self.qA = np.zeros((MsA, Lx))
         self.qA[0,:,:] = 1.
         self.qAc = np.zeros((MsA, Lx))
@@ -265,6 +263,8 @@ class SlabAB1d(object):
         self.lamA = config.grid.lam[0]
         self.lamB = config.grid.lam[1]
         self.lamY = config.grid.lam[2]
+        self.yita = self.lamY # for compressible model
+        #self.yita = np.zeros([Lx,Ly]) # for incompressible model
 
     def run(self):
         config = self.config
@@ -502,7 +502,6 @@ class SlabAB2d(object):
         self.fA = config.model.f[0]
         self.a = config.model.a[0]
         self.chiN = config.model.chiN[0]
-        self.yita = 100 # For compressible model
         self.lbc = config.model.lbc
         self.lbc_vc = config.model.lbc_vc
         self.rbc = config.model.rbc
@@ -523,7 +522,6 @@ class SlabAB2d(object):
         MsB = config.grid.vMs[1]
         self.wA = np.random.rand(Lx,Ly) - 0.5
         self.wB = np.random.rand(Lx,Ly) - 0.5
-        #self.yita = np.zeros([Lx,Ly]) # For incompressible model
         self.qA = np.zeros((MsA, Lx, Ly))
         self.qA[0,:,:] = 1.
         self.qAc = np.zeros((MsA, Lx, Ly))
@@ -555,6 +553,8 @@ class SlabAB2d(object):
         self.lamA = config.grid.lam[0]
         self.lamB = config.grid.lam[1]
         self.lamY = config.grid.lam[2]
+        self.yita = self.lamY # For compressible model
+        #self.yita = np.zeros([Lx,Ly]) # For incompressible model
 
     def run(self):
         config = self.config
@@ -795,7 +795,6 @@ class SlabAB3d(object):
         self.fA = config.model.f[0]
         self.a = config.model.a[0]
         self.chiN = config.model.chiN[0]
-        self.yita = 100 # For compressible model
         self.lbc = config.model.lbc
         self.lbc_vc = config.model.lbc_vc
         self.rbc = config.model.rbc
@@ -820,7 +819,6 @@ class SlabAB3d(object):
         MsB = config.grid.vMs[1]
         self.wA = np.random.rand(Lx,Ly,Lz) - 0.5
         self.wB = np.random.rand(Lx,Ly,Lz) - 0.5
-        #self.yita = np.zeros([Lx,Ly,Lz]) # For incompressible model
         self.qA = np.zeros((MsA, Lx, Ly, Lz))
         self.qA[0,:,:,:] = 1.
         self.qAc = np.zeros((MsA, Lx, Ly, Lz))
@@ -852,6 +850,8 @@ class SlabAB3d(object):
         self.lamA = config.grid.lam[0]
         self.lamB = config.grid.lam[1]
         self.lamY = config.grid.lam[2]
+        self.yita = self.lamY # For compressible model
+        #self.yita = np.zeros([Lx,Ly,Lz]) # For incompressible model
 
     def run(self):
         config = self.config
@@ -1117,7 +1117,6 @@ class DiskAB(object):
         self.fA = config.model.f[0]
         self.a = config.model.a[0]
         self.chiN = config.model.chiN[0]
-        self.yita = 100 # For compressible model
         self.lbc = config.model.lbc
         self.lbc_vc = config.model.lbc_vc
         self.rbc = config.model.rbc
@@ -1138,7 +1137,6 @@ class DiskAB(object):
         MsB = config.grid.vMs[1]
         self.wA = np.random.rand(Nt,Nr2) - 0.5
         self.wB = np.random.rand(Nt,Nr2) - 0.5
-        #self.yita = np.zeros([Nt,Nr2]) # For incompressible model
         self.qA = np.zeros((MsA, Nt, Nr2))
         self.qA[0,:,:] = 1.
         self.qAc = np.zeros((MsA, Nt, Nr2))
@@ -1170,6 +1168,8 @@ class DiskAB(object):
         self.lamA = config.grid.lam[0]
         self.lamB = config.grid.lam[1]
         self.lamY = config.grid.lam[2]
+        self.yita = self.lamY # For compressible model
+        #self.yita = np.zeros([Nt,Nr2]) # For incompressible model
 
     def run(self):
         config = self.config
@@ -1425,7 +1425,6 @@ class CylinderAB(object):
         self.fA = config.model.f[0]
         self.a = config.model.a[0]
         self.chiN = config.model.chiN[0]
-        self.yita = 100 # For compressible model
         self.lbc = config.model.lbc
         self.lbc_vc = config.model.lbc_vc
         self.rbc = config.model.rbc
@@ -1450,7 +1449,6 @@ class CylinderAB(object):
         MsB = config.grid.vMs[1]
         self.wA = np.random.rand(Nt,Nz,Nr2) - 0.5
         self.wB = np.random.rand(Nt,Nz,Nr2) - 0.5
-        #self.yita = np.zeros([Nt,Nz,Nr2]) # For incompressible model
         self.qA = np.zeros((MsA, Nt, Nz, Nr2))
         self.qA[0,:,:,:] = 1.
         self.qAc = np.zeros((MsA, Nt, Nz, Nr2))
@@ -1482,6 +1480,8 @@ class CylinderAB(object):
         self.lamA = config.grid.lam[0]
         self.lamB = config.grid.lam[1]
         self.lamY = config.grid.lam[2]
+        self.yita = self.lamY # For compressible model
+        #self.yita = np.zeros([Nt,Nz,Nr2]) # For incompressible model
 
     def run(self):
         config = self.config
