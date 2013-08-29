@@ -38,131 +38,6 @@ __all__ = ['SlabAB1d',
           ]
 
 
-class SlabAB2d_ETDRK4FxCy(object):
-    '''
-        ETDRK4 for Fourier in x and Chebyshev in y.
-    '''
-    def __init__(self, Lx, Ly, Nx, Ny, Ns, 
-                 h=None, lbc=BC(), rbc=BC(), algo=1, scheme=1):
-        '''
-        :param:Lx: physical size of the 1D spacial grid.
-        :param:N: number of grid points in space.
-        :param:Ns: number of grid points in time.
-        :param:h: time step.
-        '''
-        self.Lx = Lx
-        self.Ly = Ly
-        self.Nx = Nx
-        self.Ny = Ny
-        self.Ns = Ns
-        if h is None:
-            self.h = 1. / (Ns - 1)
-        else:
-            self.h = h
-        self.lbc = lbc
-        self.rbc = rbc
-        self.algo = algo
-        self.scheme = scheme
-        
-        self.update()
-
-    def update(self):
-        Lx = self.Lx
-        Ly = self.Ly
-        Nx = self.Nx
-        Ny = self.Ny
-        Ns = self.Ns
-        h = self.h
-        self.solver = []
-        for i in xrange(Nx):
-            if i < Nx/2 + 1:
-                kx = i * (2*np.pi/Lx)
-            else:
-                kx = (Nx - i) * (2*np.pi/Lx)
-            k2 = kx**2
-            s = ETDRK4FxCy(Ly, Ny, Ns, k2, h=h, lbc=self.lbc, rbc=self.rbc)
-            self.solver.append(s)
-
-    def solve(self, w, u0, q):
-        '''
-            dq(kx,y)/dt = (D^2-kx^2)q(kx,y) - Fx[w(x,y)q(x,y)]
-        where Fx is FFT in the x direction.
-            Input:
-                w: w(x,y)
-                u0: q(x,y,t=0)
-                q: q(x,y)
-        '''
-        for i in xrange(self.Nx):
-            self.solver[i].solve(w, u0, q)
-
-
-class SlabAB3d_ETDRK4FxyCz(object):
-    def __init__(self, Lx, Ly, Lz, Nx, Ny, Nz, Ns, 
-                 h=None, lbc=BC(), rbc=BC(), algo=1, scheme=1):
-        '''
-        :param:Lx: physical size of the 1D spacial grid.
-        :param:N: number of grid points in space.
-        :param:Ns: number of grid points in time.
-        :param:h: time step.
-        '''
-        self.Lx = Lx
-        self.Ly = Ly
-        self.Lz = Lz
-        self.Nx = Nx
-        self.Ny = Ny
-        self.Nz = Nz
-        self.Ns = Ns
-        if h is None:
-            self.h = 1. / (Ns - 1)
-        else:
-            self.h = h
-        self.lbc = lbc
-        self.rbc = rbc
-        self.algo = algo
-        self.scheme = scheme
-        
-        self.update()
-
-    def update(self):
-        Lx = self.Lx
-        Ly = self.Ly
-        Nx = self.Nx
-        Ny = self.Ny
-        h = self.h
-        ccx = (2*np.pi/Lx)**2
-        ccy = (2*np.pi/Ly)**2
-        k2 = np.zeros((Nx,Ny))
-        for i in xrange(Nx):
-            for j in xrange(Ny):
-                if i < Nx/2+1:
-                    kx2 = i**2
-                else:
-                    kx2 = (Nx-i)**2
-                if j < Ny/2+1:
-                    ky2 = j**2
-                else:
-                    ky2 = (Ny-j)**2
-                k2[i,j] = ccx * kx2 + ccy * ky2
-        self.expd = np.exp(-h * k2)
-
-    def solve(self, w, u0, q=None):
-        '''
-            dq/dt = Dq + Wq = Dq - wq
-        '''
-        u = u0.copy()
-        h = self.h
-        expw = np.exp(-0.5 * h * w)
-        for i in xrange(self.Ns-1):
-            u = expw * u
-            ak = fft2(u) * self.expd
-            u = ifft2(ak).real
-            u = expw * u
-            if q is not None:
-                q[i+1] = u
-
-        return u
-
-
 def calc_density_1d(q, qc, ds):
     qqc = qc * q[::-1]
     Ms, Lx = q.shape
@@ -234,8 +109,13 @@ class SlabAB1d(object):
         Ms = config.grid.Ms
         MsA = config.grid.vMs[0]
         MsB = config.grid.vMs[1]
-        self.wA = np.random.rand(Lx)
-        self.wB = np.random.rand(Lx)
+        if os.path.exists(config.grid.field_data):
+            mat = loadmat(config.grid.field_data)
+            self.wA = mat['wA']
+            self.wB = mat['wB']
+        else:
+            self.wA = np.random.rand(Lx)
+            self.wB = np.random.rand(Lx)
         self.qA = np.zeros((MsA, Lx))
         self.qA[0,:,:] = 1.
         self.qAc = np.zeros((MsA, Lx))
@@ -520,8 +400,13 @@ class SlabAB2d(object):
         Ms = config.grid.Ms
         MsA = config.grid.vMs[0]
         MsB = config.grid.vMs[1]
-        self.wA = np.random.rand(Lx,Ly) - 0.5
-        self.wB = np.random.rand(Lx,Ly) - 0.5
+        if os.path.exists(config.grid.field_data):
+            mat = loadmat(config.grid.field_data)
+            self.wA = mat['wA']
+            self.wB = mat['wB']
+        else:
+            self.wA = np.random.rand(Lx,Ly) - 0.5
+            self.wB = np.random.rand(Lx,Ly) - 0.5
         self.qA = np.zeros((MsA, Lx, Ly))
         self.qA[0,:,:] = 1.
         self.qAc = np.zeros((MsA, Lx, Ly))
@@ -817,8 +702,13 @@ class SlabAB3d(object):
         Ms = config.grid.Ms
         MsA = config.grid.vMs[0]
         MsB = config.grid.vMs[1]
-        self.wA = np.random.rand(Lx,Ly,Lz) - 0.5
-        self.wB = np.random.rand(Lx,Ly,Lz) - 0.5
+        if os.path.exists(config.grid.field_data):
+            mat = loadmat(config.grid.field_data)
+            self.wA = mat['wA']
+            self.wB = mat['wB']
+        else:
+            self.wA = np.random.rand(Lx,Ly,Lz) - 0.5
+            self.wB = np.random.rand(Lx,Ly,Lz) - 0.5
         self.qA = np.zeros((MsA, Lx, Ly, Lz))
         self.qA[0,:,:,:] = 1.
         self.qAc = np.zeros((MsA, Lx, Ly, Lz))
@@ -1135,8 +1025,14 @@ class DiskAB(object):
         Ms = config.grid.Ms
         MsA = config.grid.vMs[0]
         MsB = config.grid.vMs[1]
-        self.wA = np.random.rand(Nt,Nr2) - 0.5
-        self.wB = np.random.rand(Nt,Nr2) - 0.5
+        # Initiate fields from file or random numbers
+        if os.path.exists(config.grid.field_data):
+            mat = loadmat(config.grid.field_data)
+            self.wA = mat['wA']
+            self.wB = mat['wB']
+        else:
+            self.wA = np.random.rand(Nt,Nr2) - 0.5
+            self.wB = np.random.rand(Nt,Nr2) - 0.5
         self.qA = np.zeros((MsA, Nt, Nr2))
         self.qA[0,:,:] = 1.
         self.qAc = np.zeros((MsA, Nt, Nr2))
@@ -1447,8 +1343,13 @@ class CylinderAB(object):
         Ms = config.grid.Ms
         MsA = config.grid.vMs[0]
         MsB = config.grid.vMs[1]
-        self.wA = np.random.rand(Nt,Nz,Nr2) - 0.5
-        self.wB = np.random.rand(Nt,Nz,Nr2) - 0.5
+        if os.path.exists(config.grid.field_data):
+            mat = loadmat(config.grid.field_data)
+            self.wA = mat['wA']
+            self.wB = mat['wB']
+        else:
+            self.wA = np.random.rand(Nt,Nz,Nr2) - 0.5
+            self.wB = np.random.rand(Nt,Nz,Nr2) - 0.5
         self.qA = np.zeros((MsA, Nt, Nz, Nr2))
         self.qA[0,:,:,:] = 1.
         self.qAc = np.zeros((MsA, Nt, Nz, Nr2))

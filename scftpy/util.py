@@ -62,7 +62,7 @@ def quad_semiopen3(f, dx):
     return q * dx
 
 
-def scft_contourf(x, y, z, levels=None, cmap=None, **kwargs):
+def scft_contourf(x, y, z, levels=None, cmap=None, show_cbar=False, **kwargs):
     dx = x.max() - x.min()
     dy = y.max() - y.min()
     w, h = plt.figaspect(float(dy/dx)) # float is must
@@ -81,7 +81,9 @@ def scft_contourf(x, y, z, levels=None, cmap=None, **kwargs):
     if cmap is None:
         cmap = plt.cm.Spectral
     # actual plot
-    ax.contourf(x, y, z, levels=levels, cmap=cmap, 
+    cf = ax.contourf(x, y, z, levels=levels, cmap=cmap, 
                 antialiased=False, **kwargs)
+    if show_cbar:
+        plt.colorbar(cf)
     return fig
 
