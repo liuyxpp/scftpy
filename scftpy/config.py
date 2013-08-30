@@ -187,6 +187,9 @@ class SCFTSection(object):
 
 class SCFTConfig(object):
     def __init__(self, data):
+        '''
+        data is an instance of SafeConfigParser class.
+        '''
         self.model = ModelSection(data)
         self.uc = UnitCellSection(data)
         self.grid = GridSection(data, self.model)
