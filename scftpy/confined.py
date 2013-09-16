@@ -208,12 +208,6 @@ class SlabAB1d(object):
             Q = 0.5 * cheb_quadrature_clencurt(Qx)
             Qcx = np.mean(self.qAc[-1], axis=0) # integrate along x
             Qc = 0.5 * cheb_quadrature_clencurt(Qcx)
-            # Calculate energy
-            ff = self.chiN*phiA*phiB - self.wA*phiA - self.wB*phiB
-            F1x = np.mean(ff, axis=0)
-            F1 = 0.5 * cheb_quadrature_clencurt(F1x)
-            F2 = -np.log(Q)
-            F = F1 + F2
 
             # Calculate density
             phiA0 = phiA
@@ -232,6 +226,13 @@ class SlabAB1d(object):
             #self.qBc_solver.lbc.beta = kaB
             #self.qBc_solver.rbc.beta = kbB
             #self.qBc_solver.update()
+
+            # Calculate energy
+            ff = self.chiN*phiA*phiB - self.wA*phiA - self.wB*phiB
+            F1x = np.mean(ff, axis=0)
+            F1 = 0.5 * cheb_quadrature_clencurt(F1x)
+            F2 = -np.log(Q)
+            F = F1 + F2
 
             if t % display_interval == 0:
                 plt.plot(x, phiA, label='phi_A')
@@ -500,12 +501,6 @@ class SlabAB2d(object):
             Q = 0.5 * cheb_quadrature_clencurt(Qx)
             Qcx = np.mean(self.qAc[-1], axis=0) # integrate along x
             Qc = 0.5 * cheb_quadrature_clencurt(Qcx)
-            # Calculate energy
-            ff = self.chiN*phiA*phiB - self.wA*phiA - self.wB*phiB
-            F1x = np.mean(ff, axis=0)
-            F1 = 0.5 * cheb_quadrature_clencurt(F1x)
-            F2 = -np.log(Q)
-            F = F1 + F2
 
             # Calculate density
             phiA0 = phiA
@@ -525,6 +520,13 @@ class SlabAB2d(object):
             #self.qBc_solver.lbc.beta = kaB
             #self.qBc_solver.rbc.beta = kbB
             #self.qBc_solver.update()
+
+            # Calculate energy
+            ff = self.chiN*phiA*phiB - self.wA*phiA - self.wB*phiB
+            F1x = np.mean(ff, axis=0)
+            F1 = 0.5 * cheb_quadrature_clencurt(F1x)
+            F2 = -np.log(Q)
+            F = F1 + F2
 
             if t % display_interval == 0:
                 phiAB = phiA - phiB
@@ -820,13 +822,6 @@ class SlabAB3d(object):
             Qcx = np.mean(self.qAc[-1], axis=0) # integrate along x
             Qcxy = np.mean(Qcx, axis=0) # integrate along x
             Qc = 0.5 * cheb_quadrature_clencurt(Qcxy)
-            # Calculate energy
-            ff = self.chiN*phiA*phiB - self.wA*phiA - self.wB*phiB
-            F1x = np.mean(ff, axis=0)
-            F1xy = np.mean(F1x, axis=0)
-            F1 = 0.5 * cheb_quadrature_clencurt(F1xy)
-            F2 = -np.log(Q)
-            F = F1 + F2
 
             # Calculate density
             phiA0 = phiA
@@ -846,6 +841,14 @@ class SlabAB3d(object):
             #self.qBc_solver.lbc.beta = kaB
             #self.qBc_solver.rbc.beta = kbB
             #self.qBc_solver.update()
+
+            # Calculate energy
+            ff = self.chiN*phiA*phiB - self.wA*phiA - self.wB*phiB
+            F1x = np.mean(ff, axis=0)
+            F1xy = np.mean(F1x, axis=0)
+            F1 = 0.5 * cheb_quadrature_clencurt(F1xy)
+            F2 = -np.log(Q)
+            F = F1 + F2
 
             if t % display_interval == 0:
                 phiAB = phiA - phiB
@@ -1137,13 +1140,6 @@ class DiskAB(object):
             Qct = np.mean(self.qAc[-1], axis=0) # integrate along \theta
             Qct = np.hstack((Qct, -Qct[::-1]))
             Qc = cheb_quadrature_clencurt(rr*Qct)
-            # Calculate energy
-            ff = self.chiN*phiA*phiB - self.wA*phiA - self.wB*phiB
-            F1t = np.mean(ff, axis=0)
-            F1t = np.hstack((F1t,-F1t[::-1]))
-            F1 = cheb_quadrature_clencurt(rr*F1t)
-            F2 = -np.log(Q)
-            F = F1 + F2
 
             # Calculate density
             phiA0 = phiA
@@ -1163,6 +1159,14 @@ class DiskAB(object):
             #self.qBc_solver.lbc.beta = kaB
             #self.qBc_solver.rbc.beta = kbB
             #self.qBc_solver.update()
+
+            # Calculate energy
+            ff = self.chiN*phiA*phiB - self.wA*phiA - self.wB*phiB
+            F1t = np.mean(ff, axis=0)
+            F1t = np.hstack((F1t,-F1t[::-1]))
+            F1 = cheb_quadrature_clencurt(rr*F1t)
+            F2 = -np.log(Q)
+            F = F1 + F2
 
             if t % display_interval == 0:
                 phiAB = phiA - phiB
@@ -1465,14 +1469,6 @@ class CylinderAB(object):
             Qctz = np.mean(Qct, axis=0) # integrate along z
             Qctz = np.hstack((Qctz, -Qctz[::-1]))
             Qc = cheb_quadrature_clencurt(rr*Qctz)
-            # Calculate energy
-            ff = self.chiN*phiA*phiB - self.wA*phiA - self.wB*phiB
-            F1t = np.mean(ff, axis=0)
-            F1tz = np.mean(F1t, axis=0)
-            F1tz = np.hstack((F1tz,-F1tz[::-1]))
-            F1 = cheb_quadrature_clencurt(rr*F1tz)
-            F2 = -np.log(Q)
-            F = F1 + F2
 
             # Calculate density
             phiA0 = phiA
@@ -1492,6 +1488,15 @@ class CylinderAB(object):
             #self.qBc_solver.lbc.beta = kaB
             #self.qBc_solver.rbc.beta = kbB
             #self.qBc_solver.update()
+
+            # Calculate energy
+            ff = self.chiN*phiA*phiB - self.wA*phiA - self.wB*phiB
+            F1t = np.mean(ff, axis=0)
+            F1tz = np.mean(F1t, axis=0)
+            F1tz = np.hstack((F1tz,-F1tz[::-1]))
+            F1 = cheb_quadrature_clencurt(rr*F1tz)
+            F2 = -np.log(Q)
+            F = F1 + F2
 
             if t % display_interval == 0:
                 phiAB = phiA - phiB

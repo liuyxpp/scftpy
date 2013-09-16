@@ -29,8 +29,8 @@ def run_scft(param_file):
     if d == 1:
         pass
     elif d == 2:
-        #b = SlabAB2d(param_file)
-        b = DiskAB(param_file)
+        b = SlabAB2d(param_file)
+        #b = DiskAB(param_file)
     elif d == 3:
         #b = SlabAB3d(param_file)
         b = CylinderAB(param_file)
