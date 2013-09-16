@@ -63,6 +63,9 @@ def batch_vis_disk(path='.', param='param.ini', data='scft_out'):
             datafiles = glob.glob(pt)
             fnames = [os.path.basename(x) for x in datafiles]
             data_name = get_final_data(fnames)
+            if data == '':
+                print p + ' ignored'
+                continue
             pfile = os.path.join(p, param)
             dfile = os.path.join(p, data_name)
             vis_disk(pfile, dfile, is_save)
@@ -126,7 +129,7 @@ def vis_disk(param='param.ini', data='scft_out', is_save=False):
     phiBp[-1,:] = phiB[0,:]
     phiAp = cheb_interp2d_r(phiAp, rrp)
     phiBp = cheb_interp2d_r(phiBp, rrp)
-    phiABp = phiAp - phiBp
+    phiABp = phiBp - phiAp
     if is_show:
         scft_contourf(rp*np.cos(tp), rp*np.sin(tp), phiAp, show_cbar=True)
         scft_contourf(rp*np.cos(tp), rp*np.sin(tp), phiBp, show_cbar=True)

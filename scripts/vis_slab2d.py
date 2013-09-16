@@ -15,9 +15,11 @@ Copyright (C) 2013 Yi-Xin Liu (lyx@fudan.edu.cn)
 import argparse
 import os
 import glob
+import json
+from ConfigParser import SafeConfigParser
 
 import numpy as np
-from scipy.io import loadmat
+from scipy.io import loadmat, savemat
 import matplotlib.pylab as plt
 
 from chebpy import cheb_barycentric_matrix
@@ -53,8 +55,12 @@ def batch_vis_slab2d(path='.', param='param.ini', data='scft_out'):
     Then the full data file name is 'scft_out_XXXX.mat', the '.mat' can be
     ignored.
     Generated figures are stored in the same directory as its data file. 
+    Other data, such as H, are stored in the parent path as 'data.mat'.
     '''
     is_save = True # Do not show figure in the batch mode
+
+    var = []
+    F = []
     
     for f in os.listdir(path):
         p = os.path.join(path, f) # path
@@ -63,10 +69,42 @@ def batch_vis_slab2d(path='.', param='param.ini', data='scft_out'):
             datafiles = glob.glob(pt)
             fnames = [os.path.basename(x) for x in datafiles]
             data_name = get_final_data(fnames)
+            if data_name == '':
+                print p, ' data file missing.'
+                continue
             pfile = os.path.join(p, param)
+            if not os.path.exists(pfile):
+                print p, ' configuration file missing.'
+                continue
             dfile = os.path.join(p, data_name)
             vis_slab2d(pfile, dfile, is_save)
             print pfile, dfile
+            v = get_var(pfile)
+            var.append(v)
+            mat = loadmat(dfile)
+            F.append(mat['F'][-1])
+
+    savemat(os.path.join(path,'data'), {'v':var, 'F':F})
+
+
+def get_var(param_file):
+    '''
+        Get the main batch variable and its current value.
+    '''
+    cfg = SafeConfigParser(allow_no_value=True)
+    cfg.optionxform = str
+    cfg.read(param_file)
+    section = cfg.get('Batch', 'section')
+    # name list of the batch variable
+    batch_var = json.loads(cfg.get('Batch', 'var'))
+    var_name = batch_var[0] # the main batch variable is the first one
+    if (var_name == 'BC_coefficients_left' or 
+        var_name == 'BC_coefficients_right'):
+        bc = json.loads(cfg.get(section, var_name))
+        var = bc[1]
+    else:
+        var = cfg.getfloat(section, var_name)
+    return var
 
 
 def get_final_data(namelist):
@@ -125,7 +163,7 @@ def vis_slab2d(param='param.ini', data='scft_out', is_save=False):
     phiBp[-1,:] = phiB[0,:]
     phiAp = cheb_interp2d_y(phiAp, yyp)
     phiBp = cheb_interp2d_y(phiBp, yyp)
-    phiABp = phiAp - phiBp
+    phiABp = phiBp - phiAp
     if is_show:
         plt.plot(yyp, phiAp[Nxp/2,:])
         plt.plot(yyp, phiBp[Nxp/2,:])

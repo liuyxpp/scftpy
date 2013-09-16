@@ -3,7 +3,7 @@
 
 import numpy as np
 from scipy.interpolate import griddata
-from scipy.io import loadmat
+from scipy.io import loadmat, savemat
 import matplotlib.pylab as plt
 from mayavi import mlab
 
@@ -65,6 +65,9 @@ def vis_cylinder(param='param.ini', data='scft_out',
     phiBp[:-1,-1,:] = phiB[:,0,:]
     phiBp[-1,-1,:] = phiB[0,0,:]
     phiBp = cheb_interp3d_r(phiBp, rrp)
+
+    # To be visualized in Matlab by the m-script viscylind.m
+    savemat('display', {'x':xp, 'y':yp, 'z':zp, 'phiA':phiAp, 'phiB':phiBp})
 
     xpp, ypp, zpp = np.mgrid[-R:R:Nrp*1j,
                              -R:R:Nrp*1j,

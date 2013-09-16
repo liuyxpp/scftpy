@@ -255,7 +255,7 @@ class SlabAB1d(object):
             err2 += np.linalg.norm(phiA-phiA0)
             err2 += np.linalg.norm(phiB-phiB0)
 
-            if t % record_interval == 0:
+            if t % record_interval == 0 or err1 < thresh_residual:
                 t_end = clock()
                 ts.append(t)
                 Fs.append(F)
@@ -549,7 +549,7 @@ class SlabAB2d(object):
             err2 += np.linalg.norm(phiA-phiA0)
             err2 += np.linalg.norm(phiB-phiB0)
 
-            if t % record_interval == 0:
+            if t % record_interval == 0 or err1 < thresh_residual:
                 t_end = clock()
                 ts.append(t)
                 Fs.append(F)
@@ -874,7 +874,7 @@ class SlabAB3d(object):
             err2 += np.linalg.norm(phiA-phiA0)
             err2 += np.linalg.norm(phiB-phiB0)
 
-            if t % record_interval == 0:
+            if t % record_interval == 0 or err1 < thresh_residual:
                 t_end = clock()
                 ts.append(t)
                 Fs.append(F)
@@ -1188,7 +1188,7 @@ class DiskAB(object):
             err2 += np.linalg.norm(phiA-phiA0)
             err2 += np.linalg.norm(phiB-phiB0)
 
-            if t % record_interval == 0:
+            if t % record_interval == 0 or err1 < thresh_residual:
                 t_end = clock()
                 ts.append(t)
                 Fs.append(F)
@@ -1519,7 +1519,7 @@ class CylinderAB(object):
             err2 += np.linalg.norm(phiA-phiA0)
             err2 += np.linalg.norm(phiB-phiB0)
 
-            if t % record_interval == 0:
+            if t % record_interval == 0 or err1 < thresh_residual:
                 t_end = clock()
                 ts.append(t)
                 Fs.append(F)
