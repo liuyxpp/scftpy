@@ -23,6 +23,7 @@ parser.add_argument('-c', '--config',
 
 args = parser.parse_args()
 
+
 def run_scft(param_file):
     config = SCFTConfig.from_file(param_file)
     d = config.grid.dimension
@@ -30,14 +31,18 @@ def run_scft(param_file):
         pass
     elif d == 2:
         b = SlabAB2d(param_file)
+        print 'Choosing SlabAB2d.'
         #b = DiskAB(param_file)
+        #print 'Choosing DiskAB.'
     elif d == 3:
         #b = SlabAB3d(param_file)
+        #print 'Choosing SlabAB3d.'
         b = CylinderAB(param_file)
+        print 'Choosing CylinderAB.'
     else:
         raise ValueError('Unkonwn space dimension!')
     b.run()
 
+
 if __name__ == '__main__':
     run_scft(args.config)
-
