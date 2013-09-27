@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-brush
-=====
+brush_dimless
+=============
 
 SCFT for polymer brushes in good solvents.
 All quantities are in dimensionless form.
@@ -33,7 +33,7 @@ from chebpy import cheb_D1_mat
 from scftpy import SCFTConfig
 from scftpy import quad_open4, quad_semiopen4, quad_semiopen3
 
-__all__ = ['Brush',
+__all__ = ['Brush_Dimless',
           ]
 
 def solve_mde(w, q, L, Ns, ds):
@@ -45,7 +45,7 @@ def solve_mde(w, q, L, Ns, ds):
     pass
 
 
-def generate_IC(w, ds, ix0, L, z_hat):
+def generate_IC(w, ds, ix0, L, x_ref):
     '''
     Generate Initial Condition for MDE. 
     '''
@@ -53,9 +53,9 @@ def generate_IC(w, ds, ix0, L, z_hat):
     delta, x = make_delta(N, ix0, L)
     x0 = x[ix0]
     #u0 = delta
-    u0 = np.exp(-ds*w - z_hat**2*(x[:,0]-x0)**2/(4*ds)) / np.sqrt(4*np.pi*ds)
+    u0 = np.exp(-ds*w - x_ref**2*(x[:,0]-x0)**2/(4*ds)) / np.sqrt(4*np.pi*ds)
 
-    return z_hat*u0, x
+    return x_ref*u0, x
 
 
 def make_delta(N, ix0, L):
@@ -68,7 +68,6 @@ def make_delta_heaviside(N, ix0, L):
     Construct a delta function delta(z-z0) on Chebyshev grid.
     Approximate Dirac delta funcition by differentiating a step function.
     '''
-    #ix = int(np.arccos(2*x0/L-1) / np.pi * N)
     D, x = cheb_D1_mat(N)
     H = np.zeros(N+1)
     H[0:ix0] = 1.
@@ -141,7 +140,7 @@ def calc_brush_height(x, phi):
     return I1/I2
 
 
-class Brush(object):
+class Brush_Dimless(object):
     def __init__(self, cfgfile):
         self.config = SCFTConfig.from_file(cfgfile)
         self.init()
@@ -159,6 +158,7 @@ class Brush(object):
         self.a = config.model.a
         self.chiN = config.model.chiN
         self.beta = config.model.beta
+        self.z_hat = config.model.z_hat
         self.lbc = config.model.lbc
         self.lbc_vc = config.model.lbc_vc
         self.rbc = config.model.rbc
@@ -166,72 +166,62 @@ class Brush(object):
 
     def build_grid(self):
         config = self.config
-        Lx = config.grid.Lx; Ly = config.grid.Ly; Lz = config.grid.Lz
-        d = config.grid.dimension
+        Lx = config.grid.Lx
+        self.Lx = Lx
+        L = config.uc.a # in unit of Rg
+        self.L = L / self.z_hat # in unit of \hat{z}
+        N = Lx - 1
+        self.N = N
         Ms = config.grid.Ms
-        if d == 3:
-            self.w = np.random.rand(Lx, Ly, Lz) - 0.5
-            self.q = np.ones((Ms, Lx, Ly, Lz))
-            self.qc = np.zeros((Ms, Lx, Ly, Lz))
-        elif d == 2:
-            self.w = np.random.rand(Lx, Ly) - 0.5
-            self.q = np.ones((Ms, Lx, Ly))
-            self.qc = np.zeros((Ms, Lx, Ly))
-        elif d == 1:
-            #self.w = np.random.rand(Lx)
-            L = config.uc.a
-            N = Lx - 1
-            ii = np.arange(N+1)
-            x = np.cos(np.pi * ii / N)
-            x = .5 * (x + 1) * L
-            self.w = 1 - (x/L)**2
-            self.q = np.zeros((Ms, Lx))
-            self.q[0, :] = 1.
-            self.qc = np.zeros((Ms, Lx))
-            lbc = BC(self.lbc, self.lbc_vc)
-            rbc = BC(self.rbc, self.rbc_vc)
-            h = 1. / (Ms - 1)
-            c = 0.25 / self.beta
-            self.q_solver = ETDRK4(L, N, Ms, h=h, c=c, lbc=lbc, rbc=rbc, 
-                                   algo=1, scheme=1)
-            #self.qc_solver = ETDRK4(L, N, Ms, h=h, c=c, lbc=lbc, rbc=rbc,
-            #                        algo=1, scheme=1)
-            self.qc_solver = ETDRK4(L, N, Ms-1, h=h, c=c, lbc=lbc, rbc=rbc,
-                                   algo=1, scheme=1) # CKE
-            #self.q_solver = OSCHEB(L, N, Ms, h)
-            #self.qc_solver = OSCHEB(L, N, Ms, h)
-            #self.qc_solver = OSCHEB(L, N, Ms-1, h) # CKE
+        if os.path.exists(config.grid.field_data):
+            mat = loadmat(config.grid.field_data)
+            self.w = mat['w']
+            self.w.shape = (self.w.size,)
         else:
-            raise ValueError('Only 1D, 2D and 3D spaces are allowed!')
+            self.w = np.random.rand(Lx)
+        self.q = np.zeros((Ms, Lx))
+        self.q[0, :] = 1.
+        self.qc = np.zeros((Ms, Lx))
+        lbc = BC(self.lbc, self.lbc_vc)
+        rbc = BC(self.rbc, self.rbc_vc)
+        h = 1. / (Ms - 1)
+        c = 0.25 / self.beta
+        self.q_solver = ETDRK4(L, N, Ms, h=h, c=c, lbc=lbc, rbc=rbc, 
+                               algo=1, scheme=1)
+        #self.qc_solver = ETDRK4(L, N, Ms, h=h, c=c, lbc=lbc, rbc=rbc,
+        #                        algo=1, scheme=1)
+        self.qc_solver = ETDRK4(L, N, Ms-1, h=h, c=c, lbc=lbc, rbc=rbc,
+                               algo=1, scheme=1) # CKE
+        #self.q_solver = OSCHEB(L, N, Ms, h)
+        #self.qc_solver = OSCHEB(L, N, Ms, h)
+        #self.qc_solver = OSCHEB(L, N, Ms-1, h) # CKE
 
     def run(self):
         config = self.config
-        beta = config.model.beta
-        L = config.uc.a
-        Lx = config.grid.Lx
-        N = Lx - 1
+        L = self.L
+        Lx = self.Lx
+        N = self.N
+        Ms = config.grid.Ms
+        ds = 1. / (Ms - 1)
+        sigma = config.model.graft_density
+        ups = config.model.excluded_volume
+        beta = self.beta
+        lam = config.grid.lam[0]
+        x_ref = self.z_hat
+        phi = np.zeros(Lx)
+        print 'sigma =', sigma, 'ups =', ups, 'beta =', beta
+        print 'Lx =', Lx, 'Ms =', Ms, 'lam =', lam
+        print 'x_ref =', x_ref
+
         if self.lbc == DIRICHLET:
-            x0 = 0.05 / np.sqrt(beta) # x0 = 0.1R_g = 0.1/2/beta^{1/2}
+            x0 = 0.1 / x_ref # x0 = 0.1R_g = 0.1/x_ref
             ix0 = int(np.arccos(2*x0/L-1) / np.pi * N)
         else:
             x0 = 0.0
             ix0 = -1
         delta, x = make_delta(Lx-1, ix0, L)
         print 'x0 =', x[ix0], 'ix0 =', ix0
-        Ms = config.grid.Ms
-        ds = 1. / (Ms - 1)
-        sigma = config.model.graft_density
-        ups = config.model.excluded_volume
-        lam = config.grid.lam[0]
-        #x_ref = (4. * ups * sigma) ** (1./3)
-        x_ref = config.model.z_hat
-        phi = np.zeros(Lx)
-        #phi_ref = (0.25 * sigma * sigma / ups) ** (1./3)
-        phi_ref = config.model.phi_hat
-        #beta = 0.25 * x_ref * x_ref
-        print 'sigma =', sigma, 'ups =', ups, 'beta =', beta
-        print 'Lx =', Lx, 'Ms =', Ms, 'lam =', lam
-        print 'x_ref =', x_ref, 'phi_ref =', phi_ref
+
         display_interval = config.scft.display_interval
         record_interval = config.scft.record_interval
         save_interval = config.scft.save_interval
@@ -279,8 +269,10 @@ class Brush(object):
                 plt.ylabel('qc(-1)')
                 plt.show()
 
-            # Calculate density
+            # Calculate Q
             Q = self.q[-1, ix0]
+
+            # Calculate density
             phi0 = phi
             phi = calc_density(self.q, self.qc) / Q
             if t % display_interval == 0:
@@ -304,7 +296,7 @@ class Brush(object):
 
             h = calc_brush_height(x, phi)
 
-            if t % record_interval == 0:
+            if t % record_interval == 0 or err1 < thresh_residual:
                 t_end = clock()
                 ts.append(t)
                 Fs.append(F)
@@ -314,11 +306,11 @@ class Brush(object):
                 times.append((t_end-t_start)/record_interval)
                 print t, '\t', F1, '\t', F2, '\t', F, '\t', h
                 print '\t', err1, '\t', err2
+
             if t % save_interval == 0:
                 savemat(data_file+'_'+str(t), {'t':ts, 'time':times, 
                                     'F':Fs, 'h':hs, 'ix0':ix0,
-                                    'beta':beta, 'x_ref':x_ref,
-                                    'phi_ref':phi_ref, 'x':x,
+                                    'beta':beta, 'x_ref':x_ref, 'x':x,
                                     'err_residual':errs_residual,
                                     'err_phi':errs_phi, 
                                     'phi':phi, 'w':self.w})
@@ -328,8 +320,7 @@ class Brush(object):
             if err1 < thresh_residual:
                 savemat(data_file, {'t':ts, 'time':times,
                                     'F':Fs, 'h':hs, 'ix0':ix0,
-                                    'beta':beta, 'x_ref':x_ref,
-                                    'phi_ref':phi_ref, 'x':x,
+                                    'beta':beta, 'x_ref':x_ref, 'x':x,
                                     'err_residual':errs_residual,
                                     'err_phi':errs_phi,
                                     'phi':phi, 'w':self.w})

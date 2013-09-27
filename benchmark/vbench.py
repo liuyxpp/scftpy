@@ -77,32 +77,62 @@ def plot_N():
 
 
 def plot_error_residual():
-    base_str = '_error_N32'
+    base_str = ['_error_N32', 
+                '_error_N64', 
+                '_error_N128', 
+                '_error_N256', 
+                '_error_N512', 
+                '_error_N1024', 
+               ]
     data_name = 'scft_out.mat'
-    fig_name = 'SCFT' + base_str
+    show_rate = True
+    #fig_name = 'SCFT' + base_str
+    fig_name = 'SCFT_Ns200_error'
 
-    mat_oscheb = loadmat(os.path.join('oscheb'+base_str, data_name))
-    ts_oscheb = mat_oscheb['time']
-    errs_oscheb = mat_oscheb['err_residual']
-    mat_etdrk4 = loadmat(os.path.join('etdrk4'+base_str, data_name))
-    ts_etdrk4 = mat_etdrk4['time']
-    errs_etdrk4 = mat_etdrk4['err_residual']
 
-    plt.figure()
+    fig = plt.figure()
     ax = plt.subplot(111)
-    ax.plot(ts_oscheb[::10], errs_oscheb[::10], 
-            'bs-', mew=0, label='OSCHEB')
-    ax.plot(ts_etdrk4[::15], errs_etdrk4[::15], 
-            'ro-', mew=0, label='ETDRK4')
+    
+    Nz_oscheb = np.array([32,64,128,256,512,1024])
+    Nz_etdrk4 = np.array([32,64,128,256,512,1024])
+    rate_oscheb = np.zeros(len(base_str))
+    rate_etdrk4 = np.zeros(len(base_str))
+    for i in xrange(len(base_str)):
+        mat_oscheb = loadmat(os.path.join('oscheb'+base_str[i], data_name))
+        ts_oscheb = mat_oscheb['time'][:,0]
+        errs_oscheb = mat_oscheb['err_residual'][:,0]
+        fit_oscheb = np.polyfit(ts_oscheb[10:],
+                                np.log10(errs_oscheb[10:]), 1)
+        rate_oscheb[i] = fit_oscheb[0]
+        mat_etdrk4 = loadmat(os.path.join('etdrk4'+base_str[i], data_name))
+        ts_etdrk4 = mat_etdrk4['time'][:,0]
+        errs_etdrk4 = mat_etdrk4['err_residual'][:,0]
+        fit_etdrk4 = np.polyfit(ts_etdrk4[10:],
+                                np.log10(errs_etdrk4[10:]), 1)
+        rate_etdrk4[i] = fit_etdrk4[0]
+        if i == 2:
+            ax.plot(ts_etdrk4, errs_etdrk4, 'r-', label='ETDRK4')
+            ax.plot(ts_oscheb, errs_oscheb, 'b--', label='OSCHEB')
 
     plt.xlabel('Computation time')
-    plt.ylabel('Residual error')
+    plt.ylabel('$E_r$')
     #plt.xscale('log')
     plt.yscale('log')
     #plt.axis([2, 4000, 0.01, 1000000])
-    ax.legend(loc='upper right')
+    #ax.legend(loc='upper right')
+
+    if show_rate:
+        ax = fig.add_axes([0.55, 0.60, 0.35, 0.30])
+        ax.plot(np.log2(Nz_etdrk4), np.abs(rate_etdrk4), 
+                'ro-', mew=0, label='ETDRK4')
+        ax.plot(np.log2(Nz_oscheb), np.abs(rate_oscheb), 
+                'bs-', mew=0, label='OSCHEB')
+        plt.yscale('log')
+        plt.xlabel('$\log_2 N_z$')
+        plt.ylabel('Rate')
+        
     plt.savefig(fig_name, bbox_inches='tight')
-    plt.show()
+    #plt.show()
 
 
 def read_F(file):
@@ -364,7 +394,7 @@ def plot_error_F_ka():
 
 if __name__ == '__main__':
     #plot_N()
-    #plot_error_residual()
+    plot_error_residual()
     #plot_error_F()
     #plot_error_F_all()
-    plot_error_F_ka()
+    #plot_error_F_ka()

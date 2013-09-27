@@ -34,6 +34,11 @@ class ModelSection(object):
         self.graft_density = data.getfloat(section, 'graft_density')
         # In dimensionless unit = w N^2 / R_g^3
         self.excluded_volume = data.getfloat(section, 'excluded_volume')
+        # beta = (graft_density*exclude_volume/2)^(2/3)
+        try:
+            self.beta_in = data.getfloat(section, 'beta')
+        except ValueError:
+            self.beta_in = None
         self.lbc = data.get(section, 'BC_left')
         self.lbc_vc = json.loads(data.get(section, 'BC_coefficients_left'))
         self.rbc = data.get(section, 'BC_right')
@@ -44,17 +49,23 @@ class ModelSection(object):
     @property
     def beta(self):
         # Assume C = 1
-        return (self.excluded_volume * self.graft_density * 0.5)**(2./3)
+        if self.beta_in is None:
+            return (self.excluded_volume * self.graft_density * 0.5)**(2./3)
+        else:
+            return self.beta_in
 
     @property
     def z_hat(self):
-        # \hat{z}, in unit of R_g.
-        return (4.0 * self.excluded_volume * self.graft_density)**(1./3)
+        # in unit of R_g.
+        if self.beta_in is None:
+            return (4.0 * self.excluded_volume * self.graft_density)**(1./3)
+        else:
+            return 2.0 * np.sqrt(self.beta_in)
 
     @property
     def phi_hat(self):
-        # \hat{\phi}, assumed C = 1
-        return (self.graft_density / self.excluded_volume * 0.25)**(1./3)
+        # assumed C = 1
+        return (self.graft_density**2 / self.excluded_volume * 0.25)**(1./3)
 
     def check(self):
         n = self.n_block

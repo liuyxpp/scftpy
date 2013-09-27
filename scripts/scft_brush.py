@@ -13,9 +13,7 @@ Copyright (C) 2012 Yi-Xin Liu
 
 import argparse
 
-import numpy as np
-
-from scftpy import Brush
+from scftpy import Brush, Brush_Dimless
 
 parser = argparse.ArgumentParser(description='scft_brush options')
 parser.add_argument('-c', '--config',
@@ -25,7 +23,8 @@ parser.add_argument('-c', '--config',
 args = parser.parse_args()
 
 def run_scft(param_file):
-    b = Brush(param_file)
+    #b = Brush(param_file)
+    b = Brush_Dimless(param_file)
     b.run()
 
 if __name__ == '__main__':

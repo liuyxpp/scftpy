@@ -82,7 +82,8 @@ def batch_vis_slab2d(path='.', param='param.ini', data='scft_out'):
             v = get_var(pfile)
             var.append(v)
             mat = loadmat(dfile)
-            F.append(mat['F'][0,-1])
+            F.append(mat['F'][-1,0])
+            print v, mat['F'][-1,0]
 
     savemat(os.path.join(path,'data'), {'v':var, 'F':F})
 
