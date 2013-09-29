@@ -53,14 +53,18 @@ def generate_IC(w, ds, ix0, L, x_ref):
     delta, x = make_delta(N, ix0, L)
     x0 = x[ix0]
     #u0 = delta
-    u0 = np.exp(-ds*w - x_ref**2*(x[:,0]-x0)**2/(4*ds)) / np.sqrt(4*np.pi*ds)
+    #u0 = np.exp(-ds*w - x_ref**2 * (x[:,0]-x0)**2 / (4*ds)) / np.sqrt(4*np.pi*ds)
+    u0 = np.exp(-ds*w) * x_ref / np.sqrt(4*np.pi*ds) \
+            * np.exp(-(x[:,0]*x_ref-x0*x_ref)**2 / (4*ds))
 
-    return x_ref*u0, x
+    return u0, x
+    #return u0, x
 
 
 def make_delta(N, ix0, L):
     return make_delta_heaviside(N, ix0, L)
     #return make_delta_gauss(N, ix0, L)
+    #return make_delta_kronecker(N, ix0, L)
 
 
 def make_delta_heaviside(N, ix0, L):
@@ -75,27 +79,26 @@ def make_delta_heaviside(N, ix0, L):
     u = (2/L) * np.dot(D, H)
 
     x = .5 * (x + 1) * L
+    x.shape = (x.size, 1)
 
     return u, x
 
 
-def make_delta_kronecker(N, x0, L):
+def make_delta_kronecker(N, ix0, L):
     '''
     Construct a delta function delta(z-z0) on Chebyshev grid.
     Approximate Dirac delta funcition by Kronecker delta.
     '''
-    ix = int(np.arccos(2*x0/L-1) / np.pi * N)
     u = np.zeros(N+1)
     ii = np.arange(N+1)
     x = np.cos(np.pi * ii / N)
     w = clencurt_weights_fft(N)
-    #ix = N - 1 # set the second-to-last element to be the delta postion
-    u[ix] = (2.0/L) / w[ix]
+    u[ix0] = (2.0/L) / w[ix0]
 
     x = .5 * (x + 1) * L
     x.shape = (x.size, 1)
 
-    return u, x, ix
+    return u, x
 
 
 def make_delta_gauss(N, ix0, L):
@@ -123,9 +126,9 @@ def calc_density(q, qc):
     for i in xrange(Lx):
         #phi[i] = simps(qqc[:,i], dx=ds)
         #phi[i] = trapz(qqc[:,i], dx=ds)
-        #phi[i] = quad_open4(qqc[:,i], dx=ds)
+        phi[i] = quad_open4(qqc[:,i], dx=ds)
         #phi[i] = quad_semiopen3(qqc[:,i], dx=ds)
-        phi[i] = quad_semiopen4(qqc[:,i], dx=ds)
+        #phi[i] = quad_semiopen4(qqc[:,i], dx=ds)
 
     return phi
 
@@ -203,24 +206,22 @@ class Brush_Dimless(object):
         N = self.N
         Ms = config.grid.Ms
         ds = 1. / (Ms - 1)
-        sigma = config.model.graft_density
-        ups = config.model.excluded_volume
         beta = self.beta
         lam = config.grid.lam[0]
         x_ref = self.z_hat
         phi = np.zeros(Lx)
-        print 'sigma =', sigma, 'ups =', ups, 'beta =', beta
+        print 'beta =', beta, 'x_ref =', x_ref, 'Lz =', L
         print 'Lx =', Lx, 'Ms =', Ms, 'lam =', lam
-        print 'x_ref =', x_ref
 
         if self.lbc == DIRICHLET:
-            x0 = 0.1 / x_ref # x0 = 0.1R_g = 0.1/x_ref
+            x0 = 0.122 / x_ref # x0 = 0.1R_g = 0.1/x_ref
             ix0 = int(np.arccos(2*x0/L-1) / np.pi * N)
         else:
             x0 = 0.0
             ix0 = -1
         delta, x = make_delta(Lx-1, ix0, L)
         print 'x0 =', x[ix0], 'ix0 =', ix0
+        print 'delta integral =', 0.5 * L * cheb_quadrature_clencurt(delta)
 
         display_interval = config.scft.display_interval
         record_interval = config.scft.record_interval
@@ -255,14 +256,14 @@ class Brush_Dimless(object):
                 plt.plot(x, self.q[-1])
                 plt.ylabel('q(-1)')
                 plt.show()
-            self.qc[0] = delta
+            self.qc[0] = delta / self.q[-1, ix0]
             qc1, x = generate_IC(self.w, ds, ix0, L, x_ref)  # CKE
-            self.qc[1] = qc1  # CKE
+            self.qc[1] = qc1 # CKE
             if t % display_interval == 0:
                 plt.plot(x, self.qc[1])
                 plt.ylabel('qc[1]')
                 plt.show()
-            #self.qc_solver.solve(self.w, self.qc[0], self.qc)
+            #self.qc_solver.solve(self.w, self.qc[0], self.qc) # approx delta
             self.qc_solver.solve(self.w, self.qc[1], self.qc[1:])  # CKE
             if t % display_interval == 0:
                 plt.plot(x, self.qc[-1])
@@ -274,14 +275,15 @@ class Brush_Dimless(object):
 
             # Calculate density
             phi0 = phi
-            phi = calc_density(self.q, self.qc) / Q
+            phi = calc_density(self.q, self.qc)
+            phi_total = 0.5 * L * cheb_quadrature_clencurt(phi)
             if t % display_interval == 0:
                 plt.plot(x, phi)
                 plt.ylabel('$\phi$')
                 plt.show()
 
             # Calculate energy
-            F1 = -0.5 * beta * cheb_quadrature_clencurt(phi*phi)
+            F1 = -0.5 * beta * (0.5 * L * cheb_quadrature_clencurt(phi*phi))
             F2 = -np.log(Q)
             F = F1 + F2
 
@@ -304,8 +306,10 @@ class Brush_Dimless(object):
                 errs_residual.append(err1)
                 errs_phi.append(err2)
                 times.append((t_end-t_start)/record_interval)
-                print t, '\t', F1, '\t', F2, '\t', F, '\t', h
+                print t, '\t', F, '\t', F1, '\t', F2
+                print '\t', phi_total
                 print '\t', err1, '\t', err2
+                print
 
             if t % save_interval == 0:
                 savemat(data_file+'_'+str(t), {'t':ts, 'time':times, 
@@ -318,14 +322,14 @@ class Brush_Dimless(object):
                     savemat(q_file+'_'+str(t), {'q':self.q, 'qc':self.qc})
 
             if err1 < thresh_residual:
-                savemat(data_file, {'t':ts, 'time':times,
+                savemat(data_file+'_'+str(t), {'t':ts, 'time':times,
                                     'F':Fs, 'h':hs, 'ix0':ix0,
                                     'beta':beta, 'x_ref':x_ref, 'x':x,
                                     'err_residual':errs_residual,
                                     'err_phi':errs_phi,
                                     'phi':phi, 'w':self.w})
                 if save_q:
-                    savemat(q_file, {'q':self.q, 'qc':self.qc})
+                    savemat(q_file+'_'+str(t), {'q':self.q, 'qc':self.qc})
                 exit()
 
             # Update field

@@ -210,4 +210,3 @@ if __name__ == '__main__':
         batch_vis_slab2d(args.path, args.param_file, args.data_file)
     else:
         vis_slab2d(args.param_file, args.data_file, args.save)
-

@@ -8,6 +8,7 @@ Parse SCFT configurations.
 """
 
 import json
+import ConfigParser
 from ConfigParser import SafeConfigParser
 
 import numpy as np
@@ -37,8 +38,8 @@ class ModelSection(object):
         # beta = (graft_density*exclude_volume/2)^(2/3)
         try:
             self.beta_in = data.getfloat(section, 'beta')
-        except ValueError:
-            self.beta_in = None
+        except ConfigParser.NoOptionError:
+            self.beta_in = 0
         self.lbc = data.get(section, 'BC_left')
         self.lbc_vc = json.loads(data.get(section, 'BC_coefficients_left'))
         self.rbc = data.get(section, 'BC_right')
@@ -49,7 +50,7 @@ class ModelSection(object):
     @property
     def beta(self):
         # Assume C = 1
-        if self.beta_in is None:
+        if self.beta_in == 0:
             return (self.excluded_volume * self.graft_density * 0.5)**(2./3)
         else:
             return self.beta_in
@@ -57,7 +58,7 @@ class ModelSection(object):
     @property
     def z_hat(self):
         # in unit of R_g.
-        if self.beta_in is None:
+        if self.beta_in == 0:
             return (4.0 * self.excluded_volume * self.graft_density)**(1./3)
         else:
             return 2.0 * np.sqrt(self.beta_in)
@@ -65,7 +66,7 @@ class ModelSection(object):
     @property
     def phi_hat(self):
         # assumed C = 1
-        return (self.graft_density**2 / self.excluded_volume * 0.25)**(1./3)
+        return (0.25 * self.graft_density**2 / self.excluded_volume)**(1./3)
 
     def check(self):
         n = self.n_block

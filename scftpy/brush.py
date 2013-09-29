@@ -173,13 +173,13 @@ class Brush(object):
             self.q = np.ones((Ms, Lx, Ly))
             self.qc = np.zeros((Ms, Lx, Ly))
         elif d == 1:
-            #self.w = np.random.rand(Lx)
             L = config.uc.a
             N = Lx - 1
             ii = np.arange(N+1)
             x = np.cos(np.pi * ii / N)
             x = .5 * (x + 1) * L
-            self.w = (1 - (.5*x/L)**2)
+            #self.w = (1 - (.5*x/L)**2)
+            self.w = np.random.rand(Lx)
             self.q = np.zeros((Ms, Lx))
             self.q[0, :] = 1.
             self.qc = np.zeros((Ms, Lx))
@@ -198,9 +198,10 @@ class Brush(object):
     def run(self):
         config = self.config
         if self.lbc == DIRICHLET:
-            x0 = 0.5 * np.sqrt(6.0/self.N[0])
+            x0 = 0.5 * np.sqrt(6.0/self.N)
+            #x0 = 0.05 # in unit of Rg
         else:
-            x0 = 0
+            x0 = 0.0
         L = config.uc.a
         Lx = config.grid.Lx
         delta, x, ix0 = make_delta(Lx-1, x0, L)
@@ -268,15 +269,9 @@ class Brush(object):
                 plt.ylabel('qc(-1)')
                 plt.show()
 
-            # Calculate energy
+            # Calculate Q
             Q = self.q[-1, ix0]
             #Q = 1.0
-            #F1 = -0.5 * cheb_quadrature_clencurt(self.w*self.w)
-            #F2 = -sigma * np.log(Q)
-            F1 = -0.5 * beta * 0.5 * (L/x_ref) \
-                    * cheb_quadrature_clencurt((phi/phi_ref)**2)
-            F2 = -np.log(Q)
-            F = F1 + F2
 
             # Calculate density
             phi0 = phi
@@ -285,6 +280,14 @@ class Brush(object):
                 plt.plot(x_rescaled, phi / phi_ref)
                 plt.ylabel('$\phi$')
                 plt.show()
+
+            # Calculate energy
+            #F1 = -0.5 * cheb_quadrature_clencurt(self.w*self.w)
+            #F2 = -sigma * np.log(Q)
+            F1 = -0.5 * beta * 0.5 * (L/x_ref) \
+                    * cheb_quadrature_clencurt((phi/phi_ref)**2)
+            F2 = -np.log(Q)
+            F = F1 + F2
 
             # Estimate error
             res = phi - self.w / ups
@@ -298,7 +301,7 @@ class Brush(object):
 
             h = calc_brush_height(x/x_ref, phi/phi_ref)
 
-            if t % record_interval == 0:
+            if t % record_interval == 0 or err1 < thresh_residual:
                 t_end = clock()
                 ts.append(t)
                 Fs.append(F)
@@ -306,8 +309,10 @@ class Brush(object):
                 errs_residual.append(err1)
                 errs_phi.append(err2)
                 times.append((t_end-t_start)/record_interval)
-                print t, '\t', F1, '\t', F2, '\t', F, '\t', h
+                print t, '\t', F, '\t', F1, '\t', F2
                 print '\t', err1, '\t', err2
+                print
+
             if t % save_interval == 0:
                 savemat(data_file+'_'+str(t), {'t':ts, 'time':times, 
                                     'F':Fs, 'h':hs, 'ix0':ix0,
@@ -320,7 +325,7 @@ class Brush(object):
                     savemat(q_file+'_'+str(t), {'q':self.q, 'qc':self.qc})
 
             if err1 < thresh_residual:
-                savemat(data_file, {'t':ts, 'time':times,
+                savemat(data_file+'_'+str(t), {'t':ts, 'time':times,
                                     'F':Fs, 'h':hs, 'ix0':ix0,
                                     'beta':beta, 'x_ref':x_ref,
                                     'phi_ref':phi_ref, 'x':x/x_ref,
@@ -328,7 +333,7 @@ class Brush(object):
                                     'err_phi':errs_phi,
                                     'phi':phi/phi_ref, 'w':self.w})
                 if save_q:
-                    savemat(q_file, {'q':self.q, 'qc':self.qc})
+                    savemat(q_file+'_'+str(t), {'q':self.q, 'qc':self.qc})
                 exit()
 
             # Update field

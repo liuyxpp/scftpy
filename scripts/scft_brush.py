@@ -23,8 +23,8 @@ parser.add_argument('-c', '--config',
 args = parser.parse_args()
 
 def run_scft(param_file):
-    #b = Brush(param_file)
-    b = Brush_Dimless(param_file)
+    b = Brush(param_file)
+    #b = Brush_Dimless(param_file)
     b.run()
 
 if __name__ == '__main__':
