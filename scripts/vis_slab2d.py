@@ -26,7 +26,7 @@ from chebpy import cheb_barycentric_matrix
 
 from scftpy import scft_contourf, SCFTConfig
 
-parser = argparse.ArgumentParser(description='visdisk options')
+parser = argparse.ArgumentParser(description='vis_slab2d options')
 
 parser.add_argument('-b', '--batch',
                      action='store_true',
@@ -48,7 +48,7 @@ args = parser.parse_args()
 
 def batch_vis_slab2d(path='.', param='param.ini', data='scft_out'):
     '''
-    Batch mode visdisk, for all directory in the <path>.
+    Batch mode vis_slab2d, for all directory in the <path>.
     Note: ONLY directories in the path will be processed.
     The input var <data> is the main part of the whole data file name. The
     suffix is in the form '_XXXX', where XXXX is the max number of time steps.

@@ -28,7 +28,7 @@ parser.add_argument('-c', '--config',
 args = parser.parse_args()
 
 Ns = np.array([4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048])
-ts_etdrk4 = np.array([[4.506, 3.001, 0.059, 0.047], 
+ts_etdrk4 = np.array([[4.506, 3.001, 0.059, 0.047],
                       [4.698, 3.033, 0.062, 0.092],
                       [4.894, 3.246, 0.069, 0.179],
                       [5.635, 3.667, 0.105, 0.356],
@@ -40,7 +40,7 @@ ts_etdrk4 = np.array([[4.506, 3.001, 0.059, 0.047],
                       [5307.210, 4185.168, 1025.591, 27.322]
                      ])
 
-ts_oscheb = np.array([[30.437, 28.752, 0.017, 0.048], 
+ts_oscheb = np.array([[30.437, 28.752, 0.017, 0.048],
                       [40.478, 39.072, 0.017, 0.091],
                       [58.174, 56.475, 0.018, 0.182],
                       [97.606, 95.593, 0.017, 0.356],
@@ -53,7 +53,7 @@ ts_oscheb = np.array([[30.437, 28.752, 0.017, 0.048],
                      ])
 
 def plot_N():
-    fig_name = 'bench_Ns200'
+    fig_name = 'SCFT_Ns200'
 
     plt.figure()
     ax = plt.subplot(111)
@@ -70,29 +70,32 @@ def plot_N():
     plt.ylabel('Computation time')
     plt.xscale('log')
     plt.yscale('log')
-    plt.axis([2, 4000, 0.01, 1000000])
-    ax.legend(loc='upper left')
+    plt.axis([2, 4000, 0.01, 1e6])
+    lg = ax.legend(loc='upper left')
+    #plt.axis([2, 4000, 0.01, 1.1e4])
+    #lg = ax.legend(loc='lower right')
+    lg.draw_frame(False)
     plt.savefig(fig_name, bbox_inches='tight')
-    plt.show()
+    #plt.show()
 
 
 def plot_error_residual():
-    base_str = ['_error_N32', 
-                '_error_N64', 
-                '_error_N128', 
-                '_error_N256', 
-                '_error_N512', 
-                '_error_N1024', 
+    base_str = ['_error_N32',
+                '_error_N64',
+                '_error_N128',
+                '_error_N256',
+                '_error_N512',
+                '_error_N1024',
                ]
     data_name = 'scft_out.mat'
     show_rate = True
     #fig_name = 'SCFT' + base_str
-    fig_name = 'SCFT_Ns200_error'
+    fig_name = 'SCFT_Ns200_error.eps'
 
 
-    fig = plt.figure()
+    fig = plt.figure(figsize=(2.8, 2.1))
     ax = plt.subplot(111)
-    
+
     Nz_oscheb = np.array([32,64,128,256,512,1024])
     Nz_etdrk4 = np.array([32,64,128,256,512,1024])
     rate_oscheb = np.zeros(len(base_str))
@@ -123,15 +126,15 @@ def plot_error_residual():
 
     if show_rate:
         ax = fig.add_axes([0.55, 0.60, 0.35, 0.30])
-        ax.plot(np.log2(Nz_etdrk4), np.abs(rate_etdrk4), 
+        ax.plot(np.log2(Nz_etdrk4), np.abs(rate_etdrk4),
                 'ro-', mew=0, label='ETDRK4')
-        ax.plot(np.log2(Nz_oscheb), np.abs(rate_oscheb), 
+        ax.plot(np.log2(Nz_oscheb), np.abs(rate_oscheb),
                 'bs-', mew=0, label='OSCHEB')
         plt.yscale('log')
         plt.xlabel('$\log_2 N_z$')
         plt.ylabel('Rate')
-        
-    plt.savefig(fig_name, bbox_inches='tight')
+
+    plt.savefig(fig_name, format='eps', bbox_inches='tight')
     #plt.show()
 
 
@@ -186,7 +189,7 @@ def plot_error_F():
         ax.plot(time_oscheb[:], F_oscheb[:]-F_oscheb[-1],
             'bs-', mew=0, label='OSCHEB CKE')
     if time_etdrk4:
-        ax.plot(time_etdrk4[:], F_etdrk4[:]-F_etdrk4[-1], 
+        ax.plot(time_etdrk4[:], F_etdrk4[:]-F_etdrk4[-1],
             'ro-', mew=0, label='ETDRK4 CKE')
 
     plt.xlabel('Computation time')
@@ -379,7 +382,7 @@ def plot_error_F_ka():
     plt.figure()
     ax = plt.subplot(111)
     if time_etdrk4:
-        ax.plot(time_etdrk4[:], F_etdrk4[:]-F_etdrk4[-1], 
+        ax.plot(time_etdrk4[:], F_etdrk4[:]-F_etdrk4[-1],
             'ro-', mew=0, label='ETDRK4 CKE')
 
     plt.xlabel('Computation time')
