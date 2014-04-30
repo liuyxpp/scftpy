@@ -12,7 +12,7 @@ The only controlling parameter is \beta = (\hat{z}/2R_g)^2.
 References
 ----------
 
-Liu, Y. X. *Polymer Brushes III*, Technical Reports, Fudan University, 2012. 
+Liu, Y. X. *Polymer Brushes III*, Technical Reports, Fudan University, 2012.
 
 """
 
@@ -27,14 +27,15 @@ import matplotlib.pyplot as plt
 import mpltex.acs
 from chebpy import BC, ETDRK4, OSCHEB
 from chebpy import DIRICHLET, NEUMANN, ROBIN
-from chebpy import clencurt_weights_fft, cheb_quadrature_clencurt 
+from chebpy import clencurt_weights_fft, cheb_quadrature_clencurt
 from chebpy import cheb_D1_mat
 
 from scftpy import SCFTConfig
 from scftpy import quad_open4, quad_semiopen4, quad_semiopen3
 
 __all__ = ['Brush_Dimless',
-          ]
+           'make_delta',
+           'generate_IC', ]
 
 def solve_mde(w, q, L, Ns, ds):
     #cheb_mde_neumann_etdrk4(w, q[0], L, Ns, ds, q)
@@ -47,7 +48,7 @@ def solve_mde(w, q, L, Ns, ds):
 
 def generate_IC(w, ds, ix0, L, x_ref):
     '''
-    Generate Initial Condition for MDE. 
+    Generate Initial Condition for MDE.
     '''
     N = w.size - 1
     delta, x = make_delta(N, ix0, L)
@@ -62,8 +63,8 @@ def generate_IC(w, ds, ix0, L, x_ref):
 
 
 def make_delta(N, ix0, L):
-    return make_delta_heaviside(N, ix0, L)
-    #return make_delta_gauss(N, ix0, L)
+    #return make_delta_heaviside(N, ix0, L)
+    return make_delta_gauss(N, ix0, L)
     #return make_delta_kronecker(N, ix0, L)
 
 
@@ -111,7 +112,7 @@ def make_delta_gauss(N, ix0, L):
     x = np.cos(np.pi * ii / N)
     x = .5 * (x + 1) * L
     x0 = x[ix0]
-    
+
     u = 0.5 * np.exp(-(x-x0)**2/(2*alpha)) / np.sqrt(0.5*np.pi*alpha)
     x.shape = (x.size, 1)
 
@@ -189,7 +190,7 @@ class Brush_Dimless(object):
         rbc = BC(self.rbc, self.rbc_vc)
         h = 1. / (Ms - 1)
         c = 0.25 / self.beta
-        self.q_solver = ETDRK4(L, N, Ms, h=h, c=c, lbc=lbc, rbc=rbc, 
+        self.q_solver = ETDRK4(L, N, Ms, h=h, c=c, lbc=lbc, rbc=rbc,
                                algo=1, scheme=1)
         #self.qc_solver = ETDRK4(L, N, Ms, h=h, c=c, lbc=lbc, rbc=rbc,
         #                        algo=1, scheme=1)
@@ -312,11 +313,11 @@ class Brush_Dimless(object):
                 print
 
             if t % save_interval == 0:
-                savemat(data_file+'_'+str(t), {'t':ts, 'time':times, 
+                savemat(data_file+'_'+str(t), {'t':ts, 'time':times,
                                     'F':Fs, 'h':hs, 'ix0':ix0,
                                     'beta':beta, 'x_ref':x_ref, 'x':x,
                                     'err_residual':errs_residual,
-                                    'err_phi':errs_phi, 
+                                    'err_phi':errs_phi,
                                     'phi':phi, 'w':self.w})
                 if save_q:
                     savemat(q_file+'_'+str(t), {'q':self.q, 'qc':self.qc})

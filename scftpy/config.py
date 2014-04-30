@@ -26,6 +26,7 @@ class ModelSection(object):
     def __init__(self, data):
         section = 'Model'
         self.name = section
+        self.model = data.get(section, 'model')  # eg. AB, Brush, ABgC, etc.
         self.n_block = data.getint(section, 'n_block')
         self.N = data.getint(section, 'N')
         self.f = json.loads(data.get(section, 'f'))
@@ -77,8 +78,8 @@ class ModelSection(object):
         if n != len(self.f) or n != len(self.a) or n_chi != len(self.chiN):
             raise ConfigError('Length of parameter list does not '
                               'match number of components!')
-        if np.sum(self.f) - 1.0 > EPS:
-            raise ConfigError('Total fraction is not 1.0')
+        #if np.sum(self.f) - 1.0 > EPS:
+            #raise ConfigError('Total fraction is not 1.0')
         if self.lbc == ROBIN and len(self.lbc_vc) != 3:
             raise ConfigError('Left RBC without coefficients!')
         if self.rbc == ROBIN and len(self.rbc_vc) != 3:
@@ -138,16 +139,15 @@ class GridSection(object):
         # for i-th block, the number of discrete points is vMs[i].
         # 0-th block: 0..1..2..k..(vMs[0]-1)
         # i-th block: 0..1..2..k..(vMs[i]-1)
-        # For i>0, the point 0 of i-th block is identical to the last point of i-1
-        # (i-1)-th block.
+        # For i>0, the point 0 of i-th block is identical to
+        # the last point of i-1 (i-1)-th block.
         self.Ms = data.getint(section, 'Ms')
         L = self.Ms - 1
         n = model.n_block
         f = model.f
         vMs = np.zeros(n, int)
-        for i in xrange(n-1):
+        for i in xrange(n):
             vMs[i] = int(L * f[i])
-        vMs[n-1] = L - np.sum(vMs[:-1])
         self.vMs = vMs + 1
 
         self.check()
@@ -161,7 +161,7 @@ class GridSection(object):
             dd += 1
         if self.Lz > 1:
             dd += 1
-        if d != dd: 
+        if d != dd:
             raise ConfigError('Available Lx, Ly, and Lz do not '
                               'match given dimension!')
 
