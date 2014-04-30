@@ -351,10 +351,7 @@ class SlabABgC1d(object):
         rbcB.beta = -rbcA.beta * fA / fB
         lbcC = copy.deepcopy(lbcA)
         rbcC = copy.deepcopy(rbcA)
-        print 'lbcA=', lbcA.__dict__
-        print 'rbcA=', rbcA.__dict__
-        print 'lbcB=', lbcB.__dict__
-        print 'rbcB=', rbcB.__dict__
+
         self.qA_solver = ETDRK4(La, Lx-1, MsA, h=ds, lbc=lbcA, rbc=rbcA)
         self.qAc_solver = ETDRK4(La, Lx-1, MsA, h=ds, lbc=lbcA, rbc=rbcA)
         self.qB_solver = ETDRK4(La, Lx-1, MsB, h=ds, lbc=lbcB, rbc=rbcB)
@@ -362,6 +359,7 @@ class SlabABgC1d(object):
         self.qC_solver = ETDRK4(La, Lx-1, MsC, h=ds, lbc=lbcC, rbc=rbcC)
         #self.qCc_solver = ETDRK4(La, Lx-1, MsC-1, h=ds, lbc=lbcC, rbc=rbcC)
         self.qCc_solver = ETDRK4(La, Lx-1, MsC, h=ds, lbc=lbcC, rbc=rbcC)
+
         self.lamA = config.grid.lam[0]
         self.lamB = config.grid.lam[1]
         self.lamC = config.grid.lam[2]
@@ -460,7 +458,7 @@ class SlabABgC1d(object):
                 plt.show()
 
             # Calculate Q
-            # Q = (1/La/Lb) * \int_0^Lx \int_0^Ly q(x,y,s=1) dx dy
+            # Q = (1/La) * \int_0^Lx q(x,s=1) dx
             Q_AB = 0.5 * cheb_quadrature_clencurt(self.qB[-1])
             Qc_AB = 0.5 * cheb_quadrature_clencurt(self.qAc[-1])
             Q_C = self.qC[-1, ix0]
@@ -510,7 +508,8 @@ class SlabABgC1d(object):
             err1 += np.mean(np.abs(resC))
             # ONLY for incompressible model
             err1 += np.mean(np.abs(resY))
-            err1 /= 3.
+            err1 /= 4.
+
             err2 = 0.0
             err2 += np.linalg.norm(phiA-phiA0)
             err2 += np.linalg.norm(phiB-phiB0)
@@ -570,7 +569,7 @@ class SlabABgC1d(object):
                             )
                 exit()
 
-            # Update field
+            # Update fields
             self.wA = self.wA + self.lamA * resA
             self.wB = self.wB + self.lamB * resB
             self.wC = self.wC + self.lamC * resC

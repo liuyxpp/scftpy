@@ -9,13 +9,15 @@ Utilities for SCFT calculations.
 
 import matplotlib.pyplot as plt
 import numpy as np
+from chebpy import cheb_barycentric_matrix
 
 
 __all__ = ['quad_open4',
            'quad_semiopen4',
            'quad_semiopen3',
            'scft_contourf',
-          ]
+           'contourf_slab2d', ]
+
 
 def quad_open4(f, dx):
     '''
@@ -65,11 +67,11 @@ def quad_semiopen3(f, dx):
 def scft_contourf(x, y, z, levels=None, cmap=None, show_cbar=False, **kwargs):
     dx = x.max() - x.min()
     dy = y.max() - y.min()
-    w, h = plt.figaspect(float(dy/dx)) # float is must
+    w, h = plt.figaspect(float(dy/dx))  # float is must
     # No frame, white background, w/h aspect ratio figure
-    fig = plt.figure(figsize=(w/2,h/2), frameon=False, dpi=150, facecolor='w')
+    fig = plt.figure(figsize=(w/2, h/2), frameon=False, dpi=150, facecolor='w')
     # full figure subplot, no boarder, no axes
-    ax = fig.add_axes([0,0,1,1], frameon=False, axisbg='w')
+    ax = fig.add_axes([0, 0, 1, 1], frameon=False, axisbg='w')
     # no ticks
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
@@ -81,9 +83,52 @@ def scft_contourf(x, y, z, levels=None, cmap=None, show_cbar=False, **kwargs):
     if cmap is None:
         cmap = plt.cm.Spectral
     # actual plot
-    cf = ax.contourf(x, y, z, levels=levels, cmap=cmap, 
-                antialiased=False, **kwargs)
+    cf = ax.contourf(x, y, z, levels=levels, cmap=cmap,
+                     antialiased=False, **kwargs)
     if show_cbar:
         plt.colorbar(cf)
     return fig
 
+
+def cheb_interp2d_y(u, vy):
+    '''
+    Use chebyshev interpolation for the last dimension of Cartesian coordinates
+    (x, y).
+    u(x, y): source data
+    vy: vector to be interpolated, size is Nyp.
+    '''
+    Nx, Ny = u.shape
+    Nyp = vy.size
+    uout = np.zeros([Nx, Nyp])
+    vyp = np.linspace(-1, 1, Nyp)
+    T = cheb_barycentric_matrix(vyp, Ny-1)
+    for i in xrange(Nx):
+        uout[i] = np.dot(T, u[i])
+    return uout
+
+
+def contourf_slab2d(data, Lx, Ly):
+    '''
+    data is a 2D array with shape (Nx, Ny) to be interpolated to an array with shape of (Nx+1, 2*Ny), the corresponding physical dimension
+    is (Lx, Ly).
+    Regular grid along x, and Chebyshev grid along y.
+    '''
+    Nx, Ny = data.shape
+    Nxp = Nx + 1
+    Nyp = 2 * Ny
+
+    # Periodic in x direction, regular grid
+    xxp = np.linspace(0, Lx, Nxp)
+    # Non-periodic in y direction, Chebyshev grid
+    #ii = np.arange(Ny)
+    #yy = np.cos(np.pi * ii / (Ny - 1))  # rr [-1, 1]
+    yyp = np.linspace(0, Ly, Nyp)
+    yp, xp = np.meshgrid(yyp, xxp)
+
+    datap = np.zeros((Nxp, Ny))
+    datap[:-1, :] = data
+    datap[-1, :] = data[0, :]
+    datap = cheb_interp2d_y(datap, yyp)
+    scft_contourf(xp, yp, datap)
+
+    return xxp, yyp, datap
