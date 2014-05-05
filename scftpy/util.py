@@ -115,7 +115,7 @@ def contourf_slab2d(data, Lx, Ly):
     '''
     Nx, Ny = data.shape
     Nxp = Nx + 1
-    Nyp = 2 * Ny
+    Nyp = 4 * Ny
 
     # Periodic in x direction, regular grid
     xxp = np.linspace(0, Lx, Nxp)

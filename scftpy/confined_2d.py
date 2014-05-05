@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-confined
-========
+confined_2d
+===========
 
-SCFT for confined block copolymers.
+SCFT for confined block copolymers in 2D space.
 
 References
 ----------
@@ -407,7 +407,7 @@ class SlabABgC2d(object):
         points are not equally spaced. Therefore to integrate quantities in
         the space, one should use Gauss quadrature scheme or better the Clenshaw-Curtis scheme.
 
-        Test: PASSED 2013.08.09
+        Test: PASSED 2014.05.01
     '''
     def __init__(self, cfgfile):
         self.config = SCFTConfig.from_file(cfgfile)
@@ -495,8 +495,35 @@ class SlabABgC2d(object):
         self.lamB = config.grid.lam[1]
         self.lamC = config.grid.lam[2]
         self.lamY = config.grid.lam[3]
-        #self.yita = self.lamY # For compressible model
-        self.yita = np.zeros((Lx, Ly))  # For incompressible model
+        #self.yita = self.lamY  # compressible model
+        self.yita = np.zeros((Lx, Ly))  # incompressible model
+
+    def show_grid(self, data):
+        Lx = self.Lx
+        La, Lb = self.La, self.Lb
+        xp, yp, datap = contourf_slab2d(data, La, Lb)
+        plt.show()
+        plt.plot(yp, datap[Lx/2])
+        plt.xlabel('$y$')
+        plt.ylabel('grid data')
+        plt.show()
+
+    def show_density(self, phiA, phiB, phiC):
+        Lx = self.Lx
+        La, Lb = self.La, self.Lb
+        xp, yp, phiAp = contourf_slab2d(phiA, La, Lb)
+        plt.savefig('phiA.eps', format='eps', bbox_inches='tight')
+        xp, yp, phiBp = contourf_slab2d(phiB, La, Lb)
+        plt.savefig('phiB.eps', format='eps', bbox_inches='tight')
+        xp, yp, phiCp = contourf_slab2d(phiC, La, Lb)
+        plt.savefig('phiC.eps', format='eps', bbox_inches='tight')
+        plt.plot(yp, phiAp[Lx/2], label='$\phi_A$')
+        plt.plot(yp, phiBp[Lx/2], label='$\phi_B$')
+        plt.plot(yp, phiCp[Lx/2], label='$\phi_C$')
+        plt.legend(loc='best')
+        plt.xlabel('$y$')
+        plt.ylabel('$\phi(y)$')
+        plt.savefig('density_profile.eps', format='eps', bbox_inches='tight')
 
     def run(self):
         config = self.config
@@ -514,7 +541,7 @@ class SlabABgC2d(object):
         print 'lamA=', lamA, 'lamB=', lamB, 'lamC=', lamC, 'lamY=', lamY
         print 'Lx=', Lx, 'Ly=', Ly
         print 'La=', La, 'Lb=', Lb
-        print 'lamA=', lamA, 'lamB=', lamB, 'lamY=', lamY
+        print 'sigma=', sigma
 
         #if self.lbcC == DIRICHLET:
         #    iy0 = -2
@@ -552,35 +579,29 @@ class SlabABgC2d(object):
 
             self.qB[0] = self.qA[-1]
             if t % display_interval_test == 0:
-                plt.imshow(self.qB[0])
-                plt.show()
+                self.show_grid(self.qB[0])
             self.qB_solver.solve(self.wB, self.qB[0], self.qB)
             if t % display_interval_test == 0:
-                plt.imshow(self.qB[-1])
-                plt.show()
+                self.show_grid(self.qB[-1])
 
             self.qBc_solver.solve(self.wB, self.qBc[0], self.qBc)
 
             self.qAc[0] = self.qBc[-1]
             if t % display_interval_test == 0:
-                plt.imshow(self.qAc[0])
-                plt.show()
+                self.show_grid(self.qAc[0])
             self.qAc_solver.solve(self.wA, self.qAc[0], self.qAc)
             if t % display_interval_test == 0:
-                plt.imshow(self.qAc[-1])
-                plt.show()
+                self.show_grid(self.qAc[-1])
 
             self.qC_solver.solve(self.wC, self.qC[0], self.qC)
 
             for i in np.arange(Lx):
                 self.qCc[0, i] = 2.0 * delta / self.qC[-1, i, iy0]
             if t % display_interval_test == 0:
-                plt.imshow(self.qCc[0])
-                plt.show()
+                self.show_grid(self.qCc[0])
             self.qCc_solver.solve(self.wC, self.qCc[0], self.qCc)
             if t % display_interval_test == 0:
-                plt.imshow(self.qCc[-1])
-                plt.show()
+                self.show_grid(self.qCc[-1])
 
             # Calculate Q
             # Q = (1/La/Lb) * \int_0^Lx \int_0^Ly q(x,y,s=1) dx dy
@@ -594,8 +615,8 @@ class SlabABgC2d(object):
             # Calculate density
             phiA0, phiB0, phiC0 = phiA, phiB, phiC
             c_AB = 1. / (1 + sigma*fC)
-            phiA = c_AB * calc_density_2d(self.qA, self.qAc, self.ds)
-            phiB = c_AB * calc_density_2d(self.qB, self.qBc, self.ds)
+            phiA = c_AB * calc_density_2d(self.qA, self.qAc, ds)
+            phiB = c_AB * calc_density_2d(self.qB, self.qBc, ds)
             c_C = sigma * c_AB * Lb
             phiC = c_C * calc_density_2d(self.qC, self.qCc, ds)
             # Following codes are for strong surface interactions
@@ -621,27 +642,15 @@ class SlabABgC2d(object):
             F = F1 + F2
 
             if t % display_interval == 0:
-                xp, yp, phiAp = contourf_slab2d(phiA, La, Lb)
-                plt.show()
-                xp, yp, phiBp = contourf_slab2d(phiB, La, Lb)
-                plt.show()
-                xp, yp, phiCp = contourf_slab2d(phiC, La, Lb)
-                plt.show()
-                plt.plot(yp, phiAp[Lx/2], label='$\phi_A$')
-                plt.plot(yp, phiBp[Lx/2], label='$\phi_B$')
-                plt.plot(yp, phiCp[Lx/2], label='$\phi_C$')
-                plt.legend(loc='best')
-                plt.xlabel('$y$')
-                plt.ylabel('$\phi(y)$')
-                plt.show()
+                self.show_density(phiA, phiB, phiC)
 
             # Estimate error
             # incompressible model
             resA = chiN*phiB + chiACN*phiC + self.yita - self.wA
             resB = chiN*phiA + chiBCN*phiC + self.yita - self.wB
             resC = chiACN*phiA + chiBCN*phiB + self.yita - self.wC
-            # compresible model
             resY = phiA + phiB + phiC - 1.0
+            # compresible model
             #resA = chiN*phiB + chiACN*phiC + self.yita*resY - self.wA
             #resB = chiN*phiA + chiBCN*phiC + self.yita*resY - self.wB
             #resC = chiACN*phiA + chiBCN*phiB + self.yita*resY - self.wC

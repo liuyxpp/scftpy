@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-confined
-========
+confined_1d
+===========
 
-SCFT for confined block copolymers.
+SCFT for confined block copolymers in 1D space.
 
 References
 ----------
