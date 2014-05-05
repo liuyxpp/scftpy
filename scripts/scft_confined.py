@@ -16,7 +16,7 @@ import argparse
 from scftpy import SCFTConfig
 from scftpy import SlabAB1d, SlabABgC1d
 from scftpy import SlabAB2d, SlabABgC2d, DiskAB
-from scftpy import SlabAB3d, CylinderAB
+from scftpy import SlabAB3d, SlabABgC3d, CylinderAB
 
 parser = argparse.ArgumentParser(description='scft_brush options')
 parser.add_argument('-c', '--config',
@@ -49,8 +49,12 @@ def run_scft(param_file):
     elif d == 3:
         if model == 'AB':
             b = SlabAB3d(param_file)
+        elif model == 'ABgC':
+            b = SlabABgC3d(param_file)
         elif model == 'CylinderAB':
             b = CylinderAB(param_file)
+        else:
+            raise ValueError('Unsupported SCFT model!')
     else:
         raise ValueError('Unkonwn space dimension!')
 
