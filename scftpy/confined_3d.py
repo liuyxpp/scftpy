@@ -437,7 +437,7 @@ class SlabABgC3d(object):
         points are not equally spaced. Therefore to integrate quantities in the space, one
         should use Gauss quadrature scheme or better the Clenshaw-Curtis scheme.
 
-        Test: NONE.
+        Test: PASSED, 2014.5.7.
     '''
     def __init__(self, cfgfile):
         self.config = SCFTConfig.from_file(cfgfile)
@@ -547,16 +547,22 @@ class SlabABgC3d(object):
 
         yp, zp, phiAxp = contourf_slab2d(phiA[Lx/2], Lb, Lc)
         plt.savefig('phiAx.eps', format='eps', bbox_inches='tight')
+        plt.close()
         xp, zp, phiAyp = contourf_slab2d(phiA[:, Ly/2, :], La, Lc)
         plt.savefig('phiAy.eps', format='eps', bbox_inches='tight')
+        plt.close()
         yp, zp, phiBxp = contourf_slab2d(phiB[Lx/2], Lb, Lc)
-        plt.ssavefig('phiBx.eps', format='eps', bbox_inches='tight')
+        plt.savefig('phiBx.eps', format='eps', bbox_inches='tight')
+        plt.close()
         xp, zp, phiByp = contourf_slab2d(phiB[:, Ly/2, :], La, Lc)
         plt.savefig('phiBy.eps', format='eps', bbox_inches='tight')
+        plt.close()
         yp, zp, phiCxp = contourf_slab2d(phiC[Lx/2], Lb, Lc)
         plt.savefig('phiCx.eps', format='eps', bbox_inches='tight')
+        plt.close()
         xp, zp, phiCyp = contourf_slab2d(phiC[:, Ly/2, :], La, Lc)
         plt.savefig('phiCy.eps', format='eps', bbox_inches='tight')
+        plt.close()
 
         plt.plot(zp, phiAxp[Lx/2], label='$\phi_Ax$')
         plt.plot(zp, phiAyp[Ly/2], label='$\phi_Ay$')
@@ -567,7 +573,8 @@ class SlabABgC3d(object):
         plt.legend(loc='best')
         plt.xlabel('$z$')
         plt.ylabel('$\phi(z)$')
-        plt.savefig('density_profile', format='eps', bbox_inches='tight')
+        plt.savefig('profile.eps', format='eps', bbox_inches='tight')
+        plt.close()
 
     def run(self):
         config = self.config

@@ -511,19 +511,25 @@ class SlabABgC2d(object):
     def show_density(self, phiA, phiB, phiC):
         Lx = self.Lx
         La, Lb = self.La, self.Lb
+
         xp, yp, phiAp = contourf_slab2d(phiA, La, Lb)
         plt.savefig('phiA.eps', format='eps', bbox_inches='tight')
+        plt.close()
         xp, yp, phiBp = contourf_slab2d(phiB, La, Lb)
         plt.savefig('phiB.eps', format='eps', bbox_inches='tight')
+        plt.close()
         xp, yp, phiCp = contourf_slab2d(phiC, La, Lb)
         plt.savefig('phiC.eps', format='eps', bbox_inches='tight')
+        plt.close()
+
         plt.plot(yp, phiAp[Lx/2], label='$\phi_A$')
         plt.plot(yp, phiBp[Lx/2], label='$\phi_B$')
         plt.plot(yp, phiCp[Lx/2], label='$\phi_C$')
         plt.legend(loc='best')
         plt.xlabel('$y$')
         plt.ylabel('$\phi(y)$')
-        plt.savefig('density_profile.eps', format='eps', bbox_inches='tight')
+        plt.savefig('profile.eps', format='eps', bbox_inches='tight')
+        plt.close()
 
     def run(self):
         config = self.config
