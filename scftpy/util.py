@@ -7,6 +7,8 @@ Utilities for SCFT calculations.
 
 """
 
+import os
+import glob
 import matplotlib.pyplot as plt
 import numpy as np
 from chebpy import cheb_barycentric_matrix
@@ -16,7 +18,9 @@ __all__ = ['quad_open4',
            'quad_semiopen4',
            'quad_semiopen3',
            'scft_contourf',
-           'contourf_slab2d', ]
+           'contourf_slab2d',
+           'list_datafile',
+           ]
 
 
 def quad_open4(f, dx):
@@ -132,3 +136,41 @@ def contourf_slab2d(data, Lx, Ly):
     scft_contourf(xp, yp, datap)
 
     return xxp, yyp, datap
+
+
+def list_datafile(path='.', prefix='scft_out'):
+    '''
+    path: the path where datafile located.
+    prefix: the prefix of datafile name.
+    '''
+    datafiles = []
+    for f in os.listdir(path):
+        p = os.path.join(path, f)  # path
+        if os.path.isdir(p):
+            pt = os.path.join(p, prefix+'_*.mat')  # path to be globbed
+            files = glob.glob(pt)
+            fnames = [os.path.basename(x) for x in files]
+            data_name = get_final_datafile(fnames)
+            if data_name == '':
+                print p, ' data file missing.'
+                continue
+            dfile = os.path.join(p, data_name)
+            datafiles.append(dfile)
+
+    return datafiles
+
+
+def get_final_datafile(namelist):
+    '''
+    Each name has the form 'scft_out_XXXX.mat', where XXXX is a number.
+    '''
+    datafile = ''
+    num = 0  # a number to be compared
+    for f in namelist:
+        name, ext = os.path.splitext(f)  # split into 'scft_out_XXXX', '.mat'
+        fragments = name.split('_')  # split into 'scft', 'out', 'XXXX'
+        n = int(fragments[-1])
+        if n > num:
+            num = n
+            datafile = name
+    return datafile

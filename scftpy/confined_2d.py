@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 #from mayavi import mlab
 
 import mpltex.acs
-from chebpy import BC, ETDRK4FxCy, ETDRK4Polar
+from chebpy import BC, ETDRK4FxCy, ETDRK4FxCy2, ETDRK4Polar
 #from chebpy import DIRICHLET, NEUMANN, ROBIN
 from chebpy import cheb_quadrature_clencurt
 

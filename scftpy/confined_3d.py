@@ -674,7 +674,7 @@ class SlabABgC3d(object):
             c_AB = 1. / (1 + sigma*fC)
             phiA = c_AB * calc_density_3d(self.qA, self.qAc, self.ds)
             phiB = c_AB * calc_density_3d(self.qB, self.qBc, self.ds)
-            c_C = sigma * c_AB * Lb
+            c_C = sigma * c_AB * Lc
             phiC = c_C * calc_density_3d(self.qC, self.qCc, ds)
             # Following codes are for strong surface interactions
             #fAy = np.mean(phiA, axis=0)

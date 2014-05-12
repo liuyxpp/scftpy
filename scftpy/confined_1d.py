@@ -279,7 +279,7 @@ class SlabABgC1d(object):
     '''
         Model: A-B diblock + grafted C
         Confinement: parallel flat surfaces
-        Test: None
+        Test: PASSED, 2014.04.28
     '''
     def __init__(self, cfgfile):
         self.config = SCFTConfig.from_file(cfgfile)
