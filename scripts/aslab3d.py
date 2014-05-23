@@ -155,21 +155,23 @@ def plot(path, data):
     plt.close()
 
 
-def render(model, path, data):
+def render(path, data):
     datafiles = list_datafile(path, data)
     for dfile in datafiles:
-        mat = loadmat(dfile)
         p = os.path.dirname(dfile)
+        pfile = os.path.join(p, 'param.ini')
+        config = SCFTConfig.from_file(pfile)
+        model = config.model.model
+        Lx, Ly = config.grid.Lx, config.grid.Ly
+        La, Lb, Lc = config.uc.a, config.uc.b, config.uc.c
+
+        mat = loadmat(dfile)
         if model == 'AB':
             phiA, phiB = mat['phiA'], mat['phiB']
         elif model == 'ABgC':
             phiA, phiB, phiC = mat['phiA'], mat['phiB'], mat['phiC']
         else:
             raise ValueError('Unknown model.')
-        pfile = os.path.join(p, 'param.ini')
-        config = SCFTConfig.from_file(pfile)
-        Lx, Ly = config.grid.Lx, config.grid.Ly
-        La, Lb, Lc = config.uc.a, config.uc.b, config.uc.c
 
         yp, zp, phiApx = contourf_slab2d(phiA[Lx/2], Lb, Lc)
         figfile = os.path.join(p, 'phiAx.eps')
@@ -215,4 +217,4 @@ def render(model, path, data):
 if __name__ == '__main__':
     plot(args.path, args.data_file)
     if args.render:
-        render(args.model, args.path, args.data_file)
+        render(args.path, args.data_file)

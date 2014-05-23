@@ -482,8 +482,7 @@ class SlabABgC1d(object):
             F2 = -c_AB*np.log(Q_AB) - c_C*np.log(Q_C)
             F = F1 + F2
 
-            #if t % display_interval == 0:
-            if t % 1000 == 0:
+            if t % display_interval == 0:
                 plt.plot(x, phiA, label='$\phi_A$')
                 plt.plot(x, phiB, label='$\phi_B$')
                 plt.plot(x, phiC, label='$\phi_C$')
