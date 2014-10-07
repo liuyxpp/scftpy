@@ -80,27 +80,41 @@ def plot(path, data):
         label = os.path.basename(p)
         print label
         t, time, F = mat['t'], mat['time'], mat['F']
-        err_res, err_phi = mat['err_residual'], mat['err_phi']
         t = t.reshape(t.size)
         time = time.reshape(time.size)
         F = F.reshape(F.size)
+        err_res = mat['err_residual']
         err_res = err_res.reshape(err_res.size)
+        try:
+            err_phi = mat['err_phi']
+        except:
+            err_phi = np.ones_like(err_res)
         err_phi = err_phi.reshape(err_phi.size)
+        for i in xrange(t.size):
+            if t[i] == 0:
+                imax = i
+                break
+        t = t[:imax]
+        time = time[:imax]
+        F = F[:imax]
+        err_res = err_res[:imax]
+        err_phi = err_phi[:imax]
         err_F = F[1:] - F[:-1]
         Fs.append(F[-1])
         labels.append(label)
         phiA_meanx = np.mean(mat['phiA'], axis=0)
         phiA_meanxy = np.mean(phiA_meanx, axis=0)
         phiA_mean = 0.5 * cheb_quadrature_clencurt(phiA_meanxy)
-        print '\t', str(F[-1]), '\t', str(t[-1]), '\t', str(time[-1])
-        print '\t', str(err_res[-1]), '\t', str(phiA_mean)
+        print '\t', str(F[-1]), '\t', str(t[-1]), '\t', str(time[-1]),
+        print '\t', str(phiA_mean)
+        print '\t', str(err_res[-1])
         label = '$' + label + '$'
         labels_tex.append(label)
         ax1.plot(t, F, label=label)
         ax2.plot(time, F, label=label)
         ax3.plot(t, err_res, label=label)
         ax4.plot(time, err_res, label=label)
-        ax5.plot(t, err_res, label=label)
+        ax5.plot(t, err_phi, label=label)
         ax6.plot(time, err_phi, label=label)
         ax7.plot(t[1:], np.abs(err_F), label=label)
         ax8.plot(time[1:], np.abs(err_F), label=label)
@@ -155,15 +169,15 @@ def plot(path, data):
     plt.close()
 
 
-def render(path, data):
+def render(model, path, data):
     datafiles = list_datafile(path, data)
     for dfile in datafiles:
         p = os.path.dirname(dfile)
-        pfile = os.path.join(p, 'param.ini')
-        config = SCFTConfig.from_file(pfile)
-        model = config.model.model
-        Lx, Ly = config.grid.Lx, config.grid.Ly
-        La, Lb, Lc = config.uc.a, config.uc.b, config.uc.c
+        #pfile = os.path.join(p, 'param.ini')
+        #config = SCFTConfig.from_file(pfile)
+        #model = config.model.model
+        #Lx, Ly = config.grid.Lx, config.grid.Ly
+        #La, Lb, Lc = config.uc.a, config.uc.b, config.uc.c
 
         mat = loadmat(dfile)
         if model == 'AB':
@@ -172,6 +186,8 @@ def render(path, data):
             phiA, phiB, phiC = mat['phiA'], mat['phiB'], mat['phiC']
         else:
             raise ValueError('Unknown model.')
+        Lx, Ly, Lz = phiA.shape
+        La, Lb, Lc = mat['a_curr'][0,0], mat['b_curr'][0,0], mat['c_curr'][0,0]
 
         yp, zp, phiApx = contourf_slab2d(phiA[Lx/2], Lb, Lc)
         figfile = os.path.join(p, 'phiAx.eps')
@@ -217,4 +233,4 @@ def render(path, data):
 if __name__ == '__main__':
     plot(args.path, args.data_file)
     if args.render:
-        render(args.path, args.data_file)
+        render(args.model, args.path, args.data_file)

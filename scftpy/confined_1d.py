@@ -15,7 +15,7 @@ from time import clock
 import copy
 
 import numpy as np
-#from scipy.integrate import simps, trapz, romb
+from scipy.integrate import simps, trapz, romb
 from scipy.io import savemat, loadmat
 #from scipy.fftpack import fft, ifft
 import matplotlib.pyplot as plt
@@ -31,7 +31,9 @@ from scftpy import quad_open4
 #from scftpy import quad_semiopen4, quad_semiopen3
 
 __all__ = ['SlabAB1d',
-           'SlabABgC1d', ]
+           'SlabABgC1d',
+           'SlabAS1d',
+           ]
 
 
 def calc_density_1d(q, qc, ds):
@@ -39,15 +41,15 @@ def calc_density_1d(q, qc, ds):
     Ms, Lx = q.shape
     phi = np.zeros(Lx)
     for i in xrange(Lx):
-        #phi[i] = simps(qqc[:,i], dx=ds)
-        phi[i] = quad_open4(qqc[:, i], dx=ds)
+        phi[i] = simps(qqc[:, i], dx=ds)
+        #phi[i] = quad_open4(qqc[:, i], dx=ds)
 
     return phi
 
 
 class SlabAB1d(object):
     '''
-        Test: None
+        Test: PASSED, 2014.10.07
     '''
     def __init__(self, cfgfile):
         self.config = SCFTConfig.from_file(cfgfile)
@@ -64,7 +66,7 @@ class SlabAB1d(object):
         config = self.config
         self.N = config.model.N
         self.fA = config.model.f[0]
-        self.a = config.model.a[0]
+        self.fB = config.model.f[1]
         self.chiN = config.model.chiN[0]
         self.lbc = config.model.lbc
         self.lbc_vc = config.model.lbc_vc
@@ -80,6 +82,7 @@ class SlabAB1d(object):
         Ms = config.grid.Ms
         MsA = config.grid.vMs[0]
         MsB = config.grid.vMs[1]
+
         if os.path.exists(config.grid.field_data):
             mat = loadmat(config.grid.field_data)
             self.wA = mat['wA']
@@ -87,42 +90,56 @@ class SlabAB1d(object):
         else:
             self.wA = np.random.rand(Lx)
             self.wB = np.random.rand(Lx)
+
         self.qA = np.zeros((MsA, Lx))
-        self.qA[0,:,:] = 1.
+        self.qA[0, :] = 1.
         self.qAc = np.zeros((MsA, Lx))
         self.qB = np.zeros((MsB, Lx))
         self.qBc = np.zeros((MsB, Lx))
-        self.qBc[0,:,:] = 1.
+        self.qBc[0, :] = 1.
+
         ds = 1. / (Ms - 1)
         self.ds = ds
         lbcA = BC(self.lbc, self.lbc_vc)
         rbcA = BC(self.rbc, self.rbc_vc)
-        self.kaA = lbcA.beta; self.kbA = rbcA.beta
-        fA = self.fA; fB = 1 - fA
+        self.kaA = lbcA.beta;
+        self.kbA = rbcA.beta
+        fA = self.fA;
+        fB = self.fB
         lbcB = copy.deepcopy(lbcA)
-        lbcB.beta = -lbcA.beta * fA / fB # See Fredrickson Book p.194
+        lbcB.beta = -lbcA.beta * fA / fB  # See Fredrickson Book p.194
         rbcB = copy.deepcopy(rbcA)
         rbcB.beta = -rbcA.beta * fA / fB
-        print 'lbcA=', lbcA.__dict__
-        print 'rbcA=', rbcA.__dict__
-        print 'lbcB=', lbcB.__dict__
-        print 'rbcB=', rbcB.__dict__
+        #print 'lbcA=', lbcA.__dict__
+        #print 'rbcA=', rbcA.__dict__
+        #print 'lbcB=', lbcB.__dict__
+        #print 'rbcB=', rbcB.__dict__
+
         self.qA_solver = ETDRK4(La, Lx-1, MsA, h=ds, lbc=lbcA, rbc=rbcA)
         self.qAc_solver = ETDRK4(La, Lx-1, MsA, h=ds, lbc=lbcA, rbc=rbcA)
         self.qB_solver = ETDRK4(La, Lx-1, MsB, h=ds, lbc=lbcB, rbc=rbcB)
         self.qBc_solver = ETDRK4(La, Lx-1, MsB, h=ds, lbc=lbcB, rbc=rbcB)
+
         self.lamA = config.grid.lam[0]
         self.lamB = config.grid.lam[1]
         self.lamY = config.grid.lam[2]
-        self.yita = self.lamY # for compressible model
-        #self.yita = np.zeros([Lx,Ly]) # for incompressible model
+        #self.yita = self.lamY # for compressible model
+        self.yita = np.zeros(Lx) # for incompressible model
 
     def run(self):
         config = self.config
-        print 'fA=', self.fA, 'chiN=', self.chiN
-        print 'Lx=', self.Lx, 'La=', self.La
-        print 'lamA=', self.lamA, 'lamB=', self.lamB, 'lamY=', self.lamY
-        config.display()
+        fA, fB = self.fA, self.fB
+        chiN = self.chiN
+        Lx, La = self.Lx, self.La
+        lamA, lamB, lamY = self.lamA, self.lamB, self.lamY
+        ds = self.ds
+        print 'fA=', fA, 'fB=', fB
+        print 'MsA=', self.config.grid.vMs[0],
+        print 'MsB=', self.config.grid.vMs[1]
+        print 'chi_AB*N=', chiN
+        print 'Lx=', Lx, 'La=', La
+        print 'lamA=', lamA, 'lamB=', lamB, 'lamY=', lamY
+        #config.display()
 
         display_interval = config.scft.display_interval
         record_interval = config.scft.record_interval
@@ -134,11 +151,11 @@ class SlabAB1d(object):
         q_file = os.path.join(config.scft.base_dir,
                                  config.scft.q_file)
 
-        phiA = np.zeros([self.Lx])
-        phiB = np.zeros([self.Lx])
-        ii = np.arange(self.Lx)
-        x = np.cos(np.pi * ii / (self.Lx - 1))
-        x = 0.5 * (x + 1) * self.La
+        phiA = np.zeros([Lx])
+        phiB = np.zeros([Lx])
+        ii = np.arange(Lx)
+        x = np.cos(np.pi * ii / (Lx - 1))
+        x = 0.5 * (x + 1) * La
         ts = []
         Fs = []
         errs_residual = []
@@ -174,58 +191,53 @@ class SlabAB1d(object):
                 plt.show()
 
             # Calculate Q
-            # Q = (1/La/Lb) * \int_0^Lx \int_0^Ly q(x,y,s=1) dx dy
-            Qx = np.mean(self.qB[-1], axis=0) # integrate along x
-            Q = 0.5 * cheb_quadrature_clencurt(Qx)
-            Qcx = np.mean(self.qAc[-1], axis=0) # integrate along x
-            Qc = 0.5 * cheb_quadrature_clencurt(Qcx)
+            # Q = (1/La) * \int_0^Lx q(x, s=1) dx
+            Q = 0.5 * cheb_quadrature_clencurt(self.qB[-1])
+            Qc = 0.5 * cheb_quadrature_clencurt(self.qAc[-1])
 
             # Calculate density
             phiA0 = phiA
             phiB0 = phiB
-            phiA = calc_density_2d(self.qA, self.qAc, self.ds) / Q
-            phiB = calc_density_2d(self.qB, self.qBc, self.ds) / Q
-            #fAy = np.mean(phiA, axis=0)
-            #fBy = np.mean(phiB, axis=0)
-            #fAy0 = fAy[0]; fAyL = fAy[-1]
-            #fBy0 = fBy[0]; fByL = fBy[-1]
-            #kaB = -self.kaA * fAy0 / fBy0
-            #kbB = -self.kbA * fAyL / fByL
-            #self.qB_solver.lbc.beta = kaB
-            #self.qB_solver.rbc.beta = kbB
-            #self.qB_solver.update()
-            #self.qBc_solver.lbc.beta = kaB
-            #self.qBc_solver.rbc.beta = kbB
-            #self.qBc_solver.update()
+            # Don't divide Q_AB here to intentionally force Q_AB = 1.0
+            # which stablize the algorithm.
+            phiA = calc_density_1d(self.qA, self.qAc, self.ds)
+            phiB = calc_density_1d(self.qB, self.qBc, self.ds)
 
             # Calculate energy
             ff = self.chiN*phiA*phiB - self.wA*phiA - self.wB*phiB
-            F1x = np.mean(ff, axis=0)
-            F1 = 0.5 * cheb_quadrature_clencurt(F1x)
+            F1 = 0.5 * cheb_quadrature_clencurt(ff)
             F2 = -np.log(Q)
             F = F1 + F2
 
             if t % display_interval == 0:
-                plt.plot(x, phiA, label='phi_A')
-                plt.plot(x, phiB, label='phi_B')
+                plt.plot(x, phiA, label='$\phi_A$')
+                plt.plot(x, phiB, label='$\phi_B$')
                 plt.legend(loc='best')
-                plt.xlabel('phiA ~ x, phiB ~ x')
+                plt.xlabel('$x$')
+                plt.xlabel('$\phi(x)$')
                 plt.show()
 
             # Estimate error
-            #resA = self.chiN*phiB - self.wA + self.yita
-            #resB = self.chiN*phiA - self.wB + self.yita
+            # Incompressible model
+            resA = self.chiN*phiB - self.wA + self.yita
+            resB = self.chiN*phiA - self.wB + self.yita
+            # Compressible model
             resY = phiA + phiB - 1.0
-            resA = self.chiN*phiB + self.yita*resY - self.wA
-            resB = self.chiN*phiA + self.yita*resY - self.wB
+            #resA = self.chiN*phiB + self.yita*resY - self.wA
+            #resB = self.chiN*phiA + self.yita*resY - self.wB
             err1 = 0.0
             err1 += np.mean(np.abs(resA))
             err1 += np.mean(np.abs(resB))
-            #err1 += np.mean(np.abs(resY))
-            err1 /= 2.
+            # ONLY for incompressible model
+            err1 += np.mean(np.abs(resY))
+            err1 /= 3.
+            # Compressible model
+            #err1 /= 2.
+
             err2 = 0.0
             err2 += np.linalg.norm(phiA-phiA0)
             err2 += np.linalg.norm(phiB-phiB0)
+            err2 /= 2.
 
             if t % record_interval == 0 or err1 < thresh_residual:
                 t_end = clock()
@@ -237,8 +249,14 @@ class SlabAB1d(object):
                 times.append(time)
                 print t, '\ttime =', time, '\tF =', F
                 print '\tQ =', Q, '\tQc =', Qc
-                print '\t<A> =', np.mean(phiA), '\t<B> =', np.mean(phiB)
-                print '\t<wA> =', np.mean(self.wA), '\t<wB> =', np.mean(self.wB)
+                print '\t<A> =', 0.5 * cheb_quadrature_clencurt(phiA),
+                print '\t[', phiA.min(), ', ', phiA.max(), ']'
+                print '\t<B> =', 0.5 * cheb_quadrature_clencurt(phiB),
+                print '\t[', phiB.min(), ', ', phiB.max(), ']'
+                print '\t<wA> =', 0.5 * cheb_quadrature_clencurt(self.wA),
+                print '\t[', self.wA.min(), ', ', self.wA.max(), ']'
+                print '\t<wB> =', 0.5 * cheb_quadrature_clencurt(self.wB),
+                print '\t[', self.wB.min(), ', ', self.wB.max(), ']'
                 #print '\tyita =', self.yita
                 #print '\tkaB =', self.qB_solver.lbc.beta,
                 #print '\tkbB =', self.qB_solver.rbc.beta
@@ -246,7 +264,7 @@ class SlabAB1d(object):
                 print
             if t % save_interval == 0:
                 savemat(data_file+'_'+str(t), {'t':ts, 'time':times,
-                                    'F':Fs,
+                                    'F':Fs, 'x':x,
                                     'err_residual':errs_residual,
                                     'err_phi':errs_phi,
                                     'phiA':phiA, 'wA':self.wA,
@@ -258,7 +276,7 @@ class SlabAB1d(object):
 
             if err1 < thresh_residual:
                 savemat(data_file+'_'+str(t), {'t':ts, 'time':times,
-                                    'F':Fs,
+                                    'F':Fs, 'x':x,
                                     'err_residual':errs_residual,
                                     'err_phi':errs_phi,
                                     'phiA':phiA, 'wA':self.wA,
@@ -272,7 +290,8 @@ class SlabAB1d(object):
             # Update field
             self.wA = self.wA + self.lamA * resA
             self.wB = self.wB + self.lamB * resB
-            #self.yita = self.yita + self.lamY * resY
+            # ONLY for incompressible model
+            self.yita = self.yita + self.lamY * resY
 
 
 class SlabABgC1d(object):
@@ -573,3 +592,166 @@ class SlabABgC1d(object):
             self.wB = self.wB + self.lamB * resB
             self.wC = self.wC + self.lamC * resC
             self.yita = self.yita + lamY * resY  # incompressible model
+
+
+class SlabAS1d(object):
+    '''
+        Model: Homopolymer + implicit solvent
+        Confinement: parallel flat surfaces
+        Test: PASSED, 2014.10.07.
+    '''
+    def __init__(self, cfgfile):
+        self.config = SCFTConfig.from_file(cfgfile)
+        self.init()
+        param_file = os.path.join(self.config.scft.base_dir,
+                                  self.config.scft.param_file)
+        self.config.save_to_mat(param_file)
+
+    def init(self):
+        self.build_model()
+        self.build_grid()
+
+    def build_model(self):
+        config = self.config
+        # for AS model, config.model.f is C
+        self.C = config.model.f[0]
+        # for AS model, chiN is B
+        self.B = config.model.chiN[0]
+        self.lbc = config.model.lbc
+        self.lbc_vc = config.model.lbc_vc
+        self.rbc = config.model.rbc
+        self.rbc_vc = config.model.rbc_vc
+
+    def build_grid(self):
+        config = self.config
+        Lx = config.grid.Lx
+        self.Lx = Lx
+        La = config.uc.a
+        self.La = La
+        Ms = config.grid.Ms
+
+        if os.path.exists(config.grid.field_data):
+            mat = loadmat(config.grid.field_data)
+            self.w = mat['w']
+        else:
+            #self.w = np.zeros([Lx])
+            self.w = np.random.rand(Lx)
+
+        self.q = np.zeros((Ms, Lx))
+        self.q[0, :] = 1.
+
+        ds = 1. / (Ms - 1)
+        self.ds = ds
+        lbc = BC(self.lbc, self.lbc_vc)
+        rbc = BC(self.rbc, self.rbc_vc)
+
+        self.q_solver = ETDRK4(La, Lx-1, Ms, h=ds, lbc=lbc, rbc=rbc)
+
+        self.lam = config.grid.lam[0]
+
+    def run(self):
+        config = self.config
+        C, B = self.C, self.B
+        Lx, La = self.Lx, self.La
+        lam = self.lam
+        Ms, ds = self.config.grid.Ms, self.ds
+        print 'C=', C, 'B=', B
+        print 'Ms=', Ms
+        print 'Lx=', Lx, 'La=', La
+        print 'lam=', lam
+        #config.display()
+
+        display_interval = config.scft.display_interval
+        record_interval = config.scft.record_interval
+        save_interval = config.scft.save_interval
+        save_q = config.scft.is_save_q
+        thresh_residual = config.scft.thresh_residual
+        data_file = os.path.join(config.scft.base_dir,
+                                 config.scft.data_file)
+        q_file = os.path.join(config.scft.base_dir,
+                                 config.scft.q_file)
+
+        phi = np.zeros([Lx])
+        ii = np.arange(Lx)
+        x = np.cos(np.pi * ii / (Lx - 1))
+        x = 0.5 * (x + 1) * La
+        ts = []
+        Fs = []
+        errs_residual = []
+        errs_phi = []
+        times = []
+        t_start = clock()
+        for t in xrange(1, config.scft.max_iter+1):
+            # Solve MDE
+            self.q_solver.solve(self.w, self.q[0], self.q)
+            if t % display_interval == 0:
+                plt.plot(x, self.q[-1])
+                plt.xlabel('$x$')
+                plt.ylabel('q[-1]')
+                plt.show()
+
+            # Calculate Q
+            # Q = (1/La) * \int_0^Lx q(x, s=1) dx
+            Q = 0.5 * cheb_quadrature_clencurt(self.q[-1])
+
+            # Calculate density
+            phi0 = phi
+            phi = C * calc_density_1d(self.q, self.q, self.ds) / Q
+
+            # Calculate energy
+            ff = 0.5*B*C*C*phi*phi - self.w*phi
+            F1 = 0.5 * cheb_quadrature_clencurt(ff)
+            F2 = -C * np.log(Q)
+            F = F1 + F2
+
+            if t % display_interval == 0:
+                plt.plot(x, phi, label='$\phi$')
+                plt.legend(loc='best')
+                plt.xlabel('$x$')
+                plt.ylabel('$\phi(x)$')
+                plt.show()
+
+            res = B*C*C*phi - C * self.w
+            err1 = 0.0
+            err1 += np.mean(np.abs(res))
+
+            err2 = 0.0
+            err2 += np.linalg.norm(phi-phi0)
+
+            if t % record_interval == 0 or err1 < thresh_residual:
+                t_end = clock()
+                ts.append(t)
+                Fs.append(F)
+                errs_residual.append(err1)
+                errs_phi.append(err2)
+                time = t_end - t_start
+                times.append(time)
+                print t, '\ttime =', time, '\tF =', F
+                print '\tQ =', Q
+                print '\t<A> =', 0.5 * cheb_quadrature_clencurt(phi),
+                print '\t[', phi.min(), ', ', phi.max(), ']'
+                print '\t<wA> =', 0.5 * cheb_quadrature_clencurt(self.w),
+                print '\t[', self.w.min(), ', ', self.w.max(), ']'
+                print '\terr1 =', err1, '\terr2 =', err2
+                print
+            if t % save_interval == 0:
+                savemat(data_file+'_'+str(t), {'t':ts, 'time':times,
+                                    'F':Fs, 'x':x,
+                                    'err_residual':errs_residual,
+                                    'err_phi':errs_phi,
+                                    'phi':phi, 'w':self.w})
+                if save_q:
+                    savemat(q_file+'_'+str(t), {'q':self.q})
+
+            if err1 < thresh_residual:
+                savemat(data_file+'_'+str(t), {'t':ts, 'time':times,
+                                    'F':Fs, 'x':x,
+                                    'err_residual':errs_residual,
+                                    'err_phi':errs_phi,
+                                    'phi':phi, 'w':self.w})
+                if save_q:
+                    savemat(q_file+'_'+str(t), {'q':self.q})
+                exit()
+
+            # Update field
+            self.w = self.w + self.lam * res

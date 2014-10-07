@@ -20,6 +20,7 @@ __all__ = ['quad_open4',
            'scft_contourf',
            'contourf_slab2d',
            'list_datafile',
+           'get_final_file',
            ]
 
 
@@ -27,7 +28,7 @@ def quad_open4(f, dx):
     '''
     Integrate f[0..N] with open interval, (0, N).
     int_f = dx * (55/24*f_1 - 1/6*f_2 + 11/8 *f_3 + f_4 + f_5 + f_6
-                  ... + f_{N-4} + 11/8*f_{N-3}- 1/6*f_{N-2} + 55/24*f_{N-1})
+                  ... + f_{N-4} + 11/8*f_{N-3} - 1/6*f_{N-2} + 55/24*f_{N-1})
     '''
     N = f.size - 1
     q = 55./24 * f[1] - 1./6 * f[2] + 11./8 * f[3]
@@ -42,11 +43,11 @@ def quad_semiopen4(f, dx):
     '''
     Integrate f[0..N] with semi-open interval, (0, N].
     int_f = dx * (55/24*f_1 - 1/6*f_2 + 11/8 *f_3 + f_4 + f_5 + f_6
-                  ... + f_{N-3} + 23/24*f_{N-3}- 7/6*f_{N-2} + 3/8*f_{N-1})
+                  ... + f_{N-3} + 23/24*f_{N-3} + 7/6*f_{N-2} + 3/8*f_{N-1})
     '''
     N = f.size - 1
     q = 55./24 * f[1] - 1./6 * f[2] + 11./8 * f[3]
-    q += 3./8 * f[N] - 7./6 * f[N-1] + 23./24 * f[N-2]
+    q += 3./8 * f[N] + 7./6 * f[N-1] + 23./24 * f[N-2]
     for i in xrange(4, N-2):
         q += f[i]
 
@@ -150,7 +151,7 @@ def list_datafile(path='.', prefix='scft_out'):
             pt = os.path.join(p, prefix+'_*.mat')  # path to be globbed
             files = glob.glob(pt)
             fnames = [os.path.basename(x) for x in files]
-            data_name = get_final_datafile(fnames)
+            data_name = get_final_file(fnames)
             if data_name == '':
                 print p, ' data file missing.'
                 continue
@@ -160,9 +161,9 @@ def list_datafile(path='.', prefix='scft_out'):
     return datafiles
 
 
-def get_final_datafile(namelist):
+def get_final_file(namelist):
     '''
-    Each name has the form 'scft_out_XXXX.mat', where XXXX is a number.
+    Each name has the form 'perfix_#####.mat', where ##### is a number.
     '''
     datafile = ''
     num = 0  # a number to be compared

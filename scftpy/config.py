@@ -72,7 +72,8 @@ class ModelSection(object):
     def check(self):
         n = self.n_block
         if n == 1:
-            n_chi = 0
+            #n_chi = 0
+            n_chi = 1
         else:
             n_chi = n * (n-1) / 2
         if n != len(self.f) or n != len(self.a) or n_chi != len(self.chiN):

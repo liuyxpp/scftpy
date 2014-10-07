@@ -25,3 +25,4 @@ from bulk import *
 from confined_1d import *
 from confined_2d import *
 from confined_3d import *
+from fts_confined_1d import *
