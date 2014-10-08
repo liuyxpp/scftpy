@@ -696,7 +696,7 @@ class SlabAS1d(object):
 
             # Calculate density
             phi0 = phi
-            phi = C * calc_density_1d(self.q, self.q, self.ds) / Q
+            phi = calc_density_1d(self.q, self.q, self.ds) / Q
 
             # Calculate energy
             ff = 0.5*B*C*C*phi*phi - self.w*phi

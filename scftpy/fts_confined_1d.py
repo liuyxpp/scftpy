@@ -48,7 +48,11 @@ def calc_density_1d(q, qc, ds):
 
 class ftsSlabAS1d(object):
     '''
-        Test: None
+        For SCFT, \phi_mean = 1.0
+        For FTS, \phi_mean = C
+        Test: PASSED for complex SCFT, 2014.10.07.
+        Test: PASSED for FTS using Complex Langevin (CL), 2014.10.08.
+        Test: None for \phi-fixed FTS using CL, 2014.10.##.
     '''
     def __init__(self, cfgfile):
         self.config = SCFTConfig.from_file(cfgfile)
@@ -82,13 +86,15 @@ class ftsSlabAS1d(object):
 
         if os.path.exists(config.grid.field_data):
             mat = loadmat(config.grid.field_data)
-            self.w = mat['w']
+            self.w = mat['w'].reshape(Lx)
         else:
-            #self.w = np.zeros([Lx])
-            self.w = np.random.rand(Lx)
+            self.w = np.zeros(Lx, dtype=np.complex128)
+            #self.w.real = np.random.rand(Lx)
+            #self.w.imag = np.random.rand(Lx)
+        self.phi = np.zeros(Lx, dtype=np.complex128)
 
-        self.q = np.zeros((Ms, Lx))
-        self.q[0, :] = 1.
+        self.q = np.zeros((Ms, Lx), dtype=np.complex128)
+        self.q[0].real = 1.
 
         ds = 1. / (Ms - 1)
         self.ds = ds
@@ -103,8 +109,12 @@ class ftsSlabAS1d(object):
         config = self.config
         C, B = self.C, self.B
         Lx, La = self.Lx, self.La
+        dx = La / Lx
         lam = self.lam
         Ms, ds = self.config.grid.Ms, self.ds
+        num_eq_step = 50000
+        num_avg_step = 50000
+        print 'ftsSlabAS1d'
         print 'C=', C, 'B=', B
         print 'Ms=', Ms
         print 'Lx=', Lx, 'La=', La
@@ -121,7 +131,7 @@ class ftsSlabAS1d(object):
         q_file = os.path.join(config.scft.base_dir,
                                  config.scft.q_file)
 
-        phi = np.zeros([Lx])
+        phi_op = np.zeros(Lx, dtype=np.complex128)
         ii = np.arange(Lx)
         x = np.cos(np.pi * ii / (Lx - 1))
         x = 0.5 * (x + 1) * La
@@ -130,12 +140,18 @@ class ftsSlabAS1d(object):
         errs_residual = []
         errs_phi = []
         times = []
+        mu = []
+        mu_sum = 0.0
+        mu_avg = 0.0
+        t_avg = 0
+        phi_sum = np.zeros(Lx)
+        phi_avg = np.zeros(Lx)
         t_start = clock()
         for t in xrange(1, config.scft.max_iter+1):
             # Solve MDE
             self.q_solver.solve(self.w, self.q[0], self.q)
             if t % display_interval == 0:
-                plt.plot(x, self.q[-1])
+                plt.plot(x, self.q[-1].real)
                 plt.xlabel('$x$')
                 plt.ylabel('q[-1]')
                 plt.show()
@@ -144,64 +160,86 @@ class ftsSlabAS1d(object):
             # Q = (1/La) * \int_0^Lx q(x, s=1) dx
             Q = 0.5 * cheb_quadrature_clencurt(self.q[-1])
 
-            # Calculate density
-            phi0 = phi
-            phi = C * calc_density_1d(self.q, self.q, self.ds) / Q
+            # Calculate density operator
+            #phi0 = self.phi
+            phi_op = calc_density_1d(self.q, self.q, self.ds) / Q
 
             # Calculate energy
-            ff = 0.5*B*C*C*phi*phi - self.w*phi
+            ff = 0.5*B*C*C*self.phi*self.phi - C*self.phi*self.w
             F1 = 0.5 * cheb_quadrature_clencurt(ff)
             F2 = -C * np.log(Q)
             F = F1 + F2
 
+            # Calculate chemical potential after
+            if t > num_eq_step:
+                t_avg += 1
+                phi_sum += phi_op
+                phi_avg = phi_sum / t_avg
+                mu_op = -np.log(Q) + np.log(C)
+                mu.append(mu_op)
+                mu_sum += mu_op
+                mu_avg = mu_sum / t_avg
+
             if t % display_interval == 0:
-                plt.plot(x, phi, label='$\phi$')
+                if t > num_eq_step:
+                    plt.plot(x, phi_avg.real, label='$<\phi>$')
+                else:
+                    plt.plot(x, phi_op.real, label='$\phi$')
                 plt.legend(loc='best')
                 plt.xlabel('$x$')
                 plt.ylabel('$\phi(x)$')
                 plt.show()
 
-            res = B*C*C*phi - C * self.w
-            err1 = 0.0
-            err1 += np.mean(np.abs(res))
+            force_phi = C * (B*C*self.phi - self.w)
+            force_w = C * (self.phi - phi_op)
+            #err1 = 0.0
+            #err1 += np.mean(np.abs(force_phi.real))
+            #err1 += np.mean(np.abs(force_w.real))
+            #err1 /= 2
 
-            err2 = 0.0
-            err2 += np.linalg.norm(phi-phi0)
+            #err2 = 0.0
+            #err2 += np.linalg.norm(phi-phi0)
 
-            if t % record_interval == 0 or err1 < thresh_residual:
+            if t % record_interval == 0 or t == num_avg_step+num_eq_step:
                 t_end = clock()
                 ts.append(t)
                 Fs.append(F)
-                errs_residual.append(err1)
-                errs_phi.append(err2)
+                #errs_residual.append(err1)
+                #errs_phi.append(err2)
                 time = t_end - t_start
                 times.append(time)
                 print t, '\ttime =', time, '\tF =', F
-                print '\tQ =', Q
-                print '\t<A> =', 0.5 * cheb_quadrature_clencurt(phi),
-                print '\t[', phi.min(), ', ', phi.max(), ']'
+                print '\tQ =', Q, '\tmu =', mu_avg
+                print '\t<A> =', 0.5 * cheb_quadrature_clencurt(phi_op),
+                print '\t[', phi_op.real.min(), ', ',
+                print phi_op.real.max(), ']'
                 print '\t<wA> =', 0.5 * cheb_quadrature_clencurt(self.w),
-                print '\t[', self.w.min(), ', ', self.w.max(), ']'
-                print '\terr1 =', err1, '\terr2 =', err2
+                print '\t[', self.w.real.min(), ', ', self.w.real.max(), ']'
+                #print '\terr1 =', err1, '\terr2 =', err2
                 print
             if t % save_interval == 0:
                 savemat(data_file+'_'+str(t), {'t':ts, 'time':times,
                                     'F':Fs, 'x':x,
-                                    'err_residual':errs_residual,
-                                    'err_phi':errs_phi,
-                                    'phi':phi, 'w':self.w})
+                                    #'err_residual':errs_residual,
+                                    #'err_phi':errs_phi,
+                                    'mu_avg':mu_avg, 'mu':mu,
+                                    'phi_avg':phi_avg, 'w':self.w})
                 if save_q:
                     savemat(q_file+'_'+str(t), {'q':self.q})
 
-            if err1 < thresh_residual:
+            if t == num_avg_step+num_eq_step:
                 savemat(data_file+'_'+str(t), {'t':ts, 'time':times,
                                     'F':Fs, 'x':x,
-                                    'err_residual':errs_residual,
-                                    'err_phi':errs_phi,
-                                    'phi':phi, 'w':self.w})
+                                    #'err_residual':errs_residual,
+                                    #'err_phi':errs_phi,
+                                    'mu_avg':mu_avg, 'mu':mu,
+                                    'phi_avg':phi_avg, 'w':self.w})
                 if save_q:
                     savemat(q_file+'_'+str(t), {'q':self.q})
                 exit()
 
             # Update field
-            self.w = self.w + self.lam * res
+            self.phi -= lam * force_phi
+            self.w.real -= lam * force_w.real
+            self.w.imag -= lam * force_w.imag
+            self.w.imag += np.sqrt(2*lam/dx) * np.random.randn(Lx)
