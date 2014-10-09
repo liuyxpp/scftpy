@@ -14,7 +14,7 @@ Copyright (C) 2014 Yi-Xin Liu
 import argparse
 
 from scftpy import SCFTConfig
-from scftpy import ftsSlabAS1d
+from scftpy import ftsSlabAS1d, ftsSlabAS1d_phi
 
 parser = argparse.ArgumentParser(description='fts_confined options')
 parser.add_argument('-c', '--config',
@@ -30,7 +30,7 @@ def run_fts(param_file):
     model = config.model.model
     if d == 1:
         if model == 'AS-fts':
-            b = ftsSlabAS1d(param_file)
+            b = ftsSlabAS1d_phi(param_file)
         else:
             raise ValueError('Unsupported FTS model!')
     else:
