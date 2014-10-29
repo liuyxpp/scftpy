@@ -677,6 +677,7 @@ class SlabAS1d(object):
         x = 0.5 * (x + 1) * La
         ts = []
         Fs = []
+        mus = []
         errs_residual = []
         errs_phi = []
         times = []
@@ -684,7 +685,7 @@ class SlabAS1d(object):
         for t in xrange(1, config.scft.max_iter+1):
             # Solve MDE
             self.q_solver.solve(self.w, self.q[0], self.q)
-            if t % display_interval == 0:
+            if t % (100*display_interval) == 0:
                 plt.plot(x, self.q[-1])
                 plt.xlabel('$x$')
                 plt.ylabel('q[-1]')
@@ -703,8 +704,9 @@ class SlabAS1d(object):
             F1 = 0.5 * cheb_quadrature_clencurt(ff)
             F2 = -C * np.log(Q)
             F = F1 + F2
+            mu = -np.log(Q) + np.log(C)
 
-            if t % display_interval == 0:
+            if t % (100*display_interval) == 0:
                 plt.plot(x, phi, label='$\phi$')
                 plt.legend(loc='best')
                 plt.xlabel('$x$')
@@ -722,10 +724,13 @@ class SlabAS1d(object):
                 t_end = clock()
                 ts.append(t)
                 Fs.append(F)
+                mus.append(mu)
                 errs_residual.append(err1)
                 errs_phi.append(err2)
                 time = t_end - t_start
                 times.append(time)
+
+            if t % display_interval == 0 or err1 < thresh_residual:
                 print t, '\ttime =', time, '\tF =', F
                 print '\tQ =', Q
                 print '\t<A> =', 0.5 * cheb_quadrature_clencurt(phi),
@@ -734,9 +739,10 @@ class SlabAS1d(object):
                 print '\t[', self.w.min(), ', ', self.w.max(), ']'
                 print '\terr1 =', err1, '\terr2 =', err2
                 print
+
             if t % save_interval == 0:
                 savemat(data_file+'_'+str(t), {'t':ts, 'time':times,
-                                    'F':Fs, 'x':x,
+                                    'F':Fs, 'mu':mus, 'x':x,
                                     'err_residual':errs_residual,
                                     'err_phi':errs_phi,
                                     'phi':phi, 'w':self.w})
@@ -745,7 +751,7 @@ class SlabAS1d(object):
 
             if err1 < thresh_residual:
                 savemat(data_file+'_'+str(t), {'t':ts, 'time':times,
-                                    'F':Fs, 'x':x,
+                                    'F':Fs, 'mu':mus, 'x':x,
                                     'err_residual':errs_residual,
                                     'err_phi':errs_phi,
                                     'phi':phi, 'w':self.w})

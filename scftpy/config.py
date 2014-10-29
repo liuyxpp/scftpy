@@ -183,6 +183,7 @@ class SCFTSection(object):
             self.q_file = data.get(section, 'q_file')
         self.min_iter = data.getint(section, 'min_iter')
         self.max_iter = data.getint(section, 'max_iter')
+        self.eq_iter = data.getint(section, 'eq_iter')
         self.is_display = data.getboolean(section, 'is_display')
         self.is_save_data = data.getboolean(section, 'is_save_data')
         self.is_save_q = data.getboolean(section, 'is_save_q')

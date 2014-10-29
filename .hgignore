@@ -13,5 +13,6 @@ log
 *.bak
 *.tar.gz
 *.eps
+*.pdf
 *.sublime-project
 *.sublime-workspace

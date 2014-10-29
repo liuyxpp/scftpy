@@ -19,7 +19,9 @@ __all__ = ['quad_open4',
            'quad_semiopen3',
            'scft_contourf',
            'contourf_slab2d',
+           'list_datapath',
            'list_datafile',
+           'get_data_file',
            'get_final_file',
            ]
 
@@ -139,6 +141,23 @@ def contourf_slab2d(data, Lx, Ly):
     return xxp, yyp, datap
 
 
+def list_datapath(path='.', prefix='scft_out'):
+    '''
+    path: the path where data files locate.
+    prefix: the prefix of data filename.
+    '''
+    datapath = []
+    for f in os.listdir(path):
+        p = os.path.join(path, f)  # path
+        if os.path.isdir(p):
+            dfile = get_data_file(p)
+            if dfile == '':
+                print 'Data file missing in ', p
+                continue
+            datapath.append(p)
+    return datapath
+
+
 def list_datafile(path='.', prefix='scft_out'):
     '''
     path: the path where datafile located.
@@ -148,17 +167,22 @@ def list_datafile(path='.', prefix='scft_out'):
     for f in os.listdir(path):
         p = os.path.join(path, f)  # path
         if os.path.isdir(p):
-            pt = os.path.join(p, prefix+'_*.mat')  # path to be globbed
-            files = glob.glob(pt)
-            fnames = [os.path.basename(x) for x in files]
-            data_name = get_final_file(fnames)
-            if data_name == '':
-                print p, ' data file missing.'
+            dfile = get_data_file(p, prefix)
+            if dfile == '':
+                print 'Data file missing in ', p
                 continue
-            dfile = os.path.join(p, data_name)
             datafiles.append(dfile)
-
     return datafiles
+
+
+def get_data_file(data_path, prefix='scft_out'):
+    pt = os.path.join(data_path, prefix+'_*.mat')  # path to be globbed
+    files = glob.glob(pt)
+    fnames = [os.path.basename(x) for x in files]
+    data_name = get_final_file(fnames)
+    if data_name == '':
+        return ''
+    return os.path.join(data_path, data_name)
 
 
 def get_final_file(namelist):
